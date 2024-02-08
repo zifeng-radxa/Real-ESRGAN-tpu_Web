@@ -161,3 +161,6 @@ cython_debug/
 *.mp4
 #*.bmodel
 test/
+*.zip
+RealESRGAN_x4plus_1684x_f32_1_3_480_640.bmodel
+models
