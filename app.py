@@ -2,12 +2,12 @@ import base64
 import os
 import uuid
 import streamlit as st
-from streamlit_image_select import image_select
-from st_clickable_images import clickable_images
+#from streamlit_image_select import image_select
+#from st_clickable_images import clickable_images
 from upscale import Upscale
 from streamlit_image_comparison import image_comparison
 
-from PIL import Image
+#from PIL import Image
 MODEL_PATH = './model/realesrgan-x4_BF16_480.bmodel'
 DEVICE_ID = 0
 

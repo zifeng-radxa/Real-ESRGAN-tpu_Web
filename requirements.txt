@@ -1,9 +1,9 @@
+numpy
 gradio==3.50.2
 tqdm
-numpy
 streamlit
-opencv-python-headless
 streamlit_image_comparison
-streamlit_image_select
-st_clickable_images
-pillow
+opencv-python-headless
+#streamlit_image_select
+#st_clickable_images
+#pillow
