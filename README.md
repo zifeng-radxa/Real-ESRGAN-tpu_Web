@@ -1,7 +1,10 @@
 # Real-ESRGAN-TPU
 
 > Run Real-ESRGAN on BM1684X 
+> 
+**✨support run by gradio or streamlit**
 
+**🌟support upscale video and image**
 ### Real-ESRGAN: Training Real-World Blind Super-Resolution with Pure Synthetic Data
 
 > [[Paper](https://arxiv.org/abs/2107.10833)]   [[YouTube Video](https://www.youtube.com/watch?v=fxHWoDSSvSc)]   [[B站讲解](https://www.bilibili.com/video/BV1H34y1m7sS/)]   [[Poster](https://xinntao.github.io/projects/RealESRGAN_src/RealESRGAN_poster.pdf)]   [[PPT slides](https://docs.google.com/presentation/d/1QtW6Iy8rm8rGLsJ0Ldti6kP-7Qyzy6XL/edit?usp=sharing&ouid=109799856763657548160&rtpof=true&sd=true)]
@@ -27,10 +30,13 @@
   pip3 install https://github.com/radxa-edge/TPU-Edge-AI/releases/download/v0.1.0/tpu_perf-1.2.31-py3-none-manylinux2014_aarch64.whl
   ```
 
-- run the boot strip 
-
+- run the boot script
+  - run by gradio
   ```bash
-  bash run.sh
+  bash run_gr.sh
   ```
-
-- use browser access port 7860
+  - run by streamlit
+  ```bash
+  bash run_st.sh
+  ```
+![upscale_comparison](./asset/upscale_comparison.png)
