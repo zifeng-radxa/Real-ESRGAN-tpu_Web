@@ -1,13 +1,10 @@
 import os
 import uuid
 import gradio as gr
-from upscale import Upscale, EngineOV
+from upscale import Upscale
 
 model_list = ['realesrgan-x4_BF16_480.bmodel']
 
-
-# model_odd = load_model()
-# model_even = load_model()
 
 def run(input_path, model, type, num_worker=1, audio_check=None):
     if not os.path.exists(os.path.join('./result', type)):
@@ -18,11 +15,12 @@ def run(input_path, model, type, num_worker=1, audio_check=None):
     else:
         output_path = './result/image/out_{}.jpg'.format(uuid.uuid4())
         tmp_path = None
-    # try:
-    up = Upscale(input_path, output_path, model, tmp_path, type, num_worker=num_worker)
-    result_path = up(audio_check)
-    # except Exception as e:
-    #     return (e, None)
+    try:
+        up = Upscale(input_path, output_path, model, tmp_path, type, num_worker=num_worker)
+        result_path = up(audio_check)
+    except Exception as e:
+        gr.Error("Error, please check the info box")
+        return (e, None)
 
     return ("Success upscale, click download icon to download to local", result_path)
 
@@ -69,5 +67,6 @@ if __name__ == '__main__':
                     hide_textbox = gr.Textbox(value="image", visible=False)
                     start_button.click(run, [up_img, model, hide_textbox], outputs=[info_text, ret_img])
 
+
     demo.queue(max_size=2)
-    demo.launch(debug=True, show_api=True, share=False, server_name="0.0.0.0")
+    demo.launch(debug=False, show_api=True, share=False, server_name="0.0.0.0")

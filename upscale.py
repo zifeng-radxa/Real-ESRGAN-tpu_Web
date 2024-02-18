@@ -5,13 +5,16 @@ from tqdm import tqdm
 import gradio as gr
 import numpy as np
 from util import fuse_audio_with_ffmpeg, resize_video
-
 import cv2
-del os.environ["LD_LIBRARY_PATH"]
 from threading import Thread
 import uuid
 MODEL_PATH = './model/'
 DEVICE_ID = 0
+
+try:
+    del os.environ["LD_LIBRARY_PATH"]
+except Exception as e:
+    pass
 
 
 def load_model(model_name):
