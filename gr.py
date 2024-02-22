@@ -3,8 +3,12 @@ import uuid
 import gradio as gr
 from upscale import Upscale
 
-model_list = ['realesrgan-x4_BF16_480.bmodel']
-
+model_list = ['RealESRGAN_x4plus_BF16_rgb_1_3_480_640.bmodel',
+              'RealESRGAN_x4plus_anime_6B_rgb_1_3_480_640.bmodel',
+              'realesr-animevideo_v3_rgb_1_3_480_640.bmodel',
+              'realesr-general-x4v3_dni_0_2_rgb_1_3_480_640.bmodel',
+              'realesr-animevideo_v3_rgb_1_3_480_640.bmodel'
+              ]
 
 def run(input_path, model, type, num_worker=1, audio_check=None):
     if not os.path.exists(os.path.join('./result', type)):
@@ -28,6 +32,11 @@ def run(input_path, model, type, num_worker=1, audio_check=None):
 description = """
 # Real-ESRGAN with BM1684M🛸\n
 run Real-ESRGAN to upscale video/image resolution by TPU
+## Model choose
+**RealESRGAN_x4plus**\n
+**RealESRGAN_x4plus_anime_6B** optimized for anime images with much smaller model size\n
+**realesr-animevideo_v3** optimized for anime videos\n
+**realesr-general-x4v3** a tiny small model for general scenes\n
 """
 
 if __name__ == '__main__':
@@ -45,7 +54,7 @@ if __name__ == '__main__':
                             info="if click would output with audio"
                         )
                         num_worker = gr.Slider(1, 10, value=4, step=1, label="Thread", info="Choose between 1 and 10")
-                        model = gr.Dropdown(choices=model_list, value=model_list[0], info="select a model",
+                        model = gr.Dropdown(choices=model_list, value=model_list[3], info="select a model",
                                             label="Model")
                     info_text = gr.Textbox(label="info output", lines=3)
 

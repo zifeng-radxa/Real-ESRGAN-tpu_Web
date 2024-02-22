@@ -2,9 +2,13 @@
 
 > Run Real-ESRGAN on BM1684X 
 > 
-**✨support run by gradio or streamlit**
+**✨Support run by gradio or streamlit**
 
-**🌟support upscale video and image**
+**🌟Support upscale video and image**
+
+**🌠Support realesrgan-x4plus model**
+
+
 ### Real-ESRGAN: Training Real-World Blind Super-Resolution with Pure Synthetic Data
 
 > [[Paper](https://arxiv.org/abs/2107.10833)]   [[YouTube Video](https://www.youtube.com/watch?v=fxHWoDSSvSc)]   [[B站讲解](https://www.bilibili.com/video/BV1H34y1m7sS/)]   [[Poster](https://xinntao.github.io/projects/RealESRGAN_src/RealESRGAN_poster.pdf)]   [[PPT slides](https://docs.google.com/presentation/d/1QtW6Iy8rm8rGLsJ0Ldti6kP-7Qyzy6XL/edit?usp=sharing&ouid=109799856763657548160&rtpof=true&sd=true)]
@@ -23,19 +27,19 @@
   git clone https://github.com/zifeng-radxa/Real-ESRGAN-tpu_Web.git
   ```
 
-- setup environment (use sophon-opencv, please setup follow Sophon-mw instruction)
+- Setup environment (use sophon-opencv, please setup follow Sophon-mw instruction)
 
   ```bash
   pip3 install -r requirements.txt
   pip3 install https://github.com/radxa-edge/TPU-Edge-AI/releases/download/v0.1.0/tpu_perf-1.2.31-py3-none-manylinux2014_aarch64.whl
   ```
 
-- run the boot script
-  - run by gradio
+- Run the boot script
+  - Run by gradio
   ```bash
   bash run_gr.sh
   ```
-  - run by streamlit
+  - *(Optional) Run by streamlit*
   ```bash
   bash run_st.sh
   ```

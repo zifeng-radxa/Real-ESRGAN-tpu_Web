@@ -8,7 +8,13 @@ from upscale import Upscale
 from streamlit_image_comparison import image_comparison
 
 #from PIL import Image
-MODEL_PATH = './model/realesrgan-x4_BF16_480.bmodel'
+model_list = ['RealESRGAN_x4plus_BF16_rgb_1_3_480_640.bmodel',
+              'RealESRGAN_x4plus_anime_6B_rgb_1_3_480_640.bmodel',
+              'realesr-animevideo_v3_rgb_1_3_480_640.bmodel',
+              'realesr-general-x4v3_dni_0_2_rgb_1_3_480_640.bmodel',
+              'realesr-animevideo_v3_rgb_1_3_480_640.bmodel'
+              ]
+
 DEVICE_ID = 0
 
 
@@ -68,6 +74,11 @@ def download_bytes(result_path, type):
 description = """
 # Real-ESRGAN with BM1684M🛸\n
 run Real-ESRGAN to upscale video/image resolution by TPU
+## Model choose
+**RealESRGAN_x4plus**\n
+**RealESRGAN_x4plus_anime_6B** optimized for anime images with much smaller model size\n
+**realesr-animevideo_v3** optimized for anime videos\n
+**realesr-general-x4v3** a tiny small model for general scenes\n
 """
 
 
@@ -99,7 +110,7 @@ if __name__ == '__main__':
                                            value=4,
                                            step=1)
                     with model_c:
-                        model_name = st.selectbox(label="Model", options=['realesrgan-x4_BF16_480.bmodel'], index=0,
+                        model_name = st.selectbox(label="Model", options=model_list, index=3,
                                                   key="video_model")
 
             audio = st.checkbox(label="Audio output", help="output video include audio")
@@ -131,7 +142,7 @@ if __name__ == '__main__':
 
             with adv_c:
                 with st.expander("advanced"):
-                    model_name = st.selectbox(label="Model", options=['realesrgan-x4_BF16_480.bmodel'], index=0, key="image_model")
+                    model_name = st.selectbox(label="Model", options=model_list, index=0, key="image_model")
 
         if button:
             try:
