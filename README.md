@@ -6,7 +6,7 @@
 
 **🌟Support upscale video and image**
 
-**🌠Support realesrgan-x4plus model**
+**🌠Support models:** *RealESRGAN_x4plus*, *RealESRGAN_x4plus_anime_6B*, *realesr-animevideo_v3*, *realesr-general-x4v3* 
 
 
 ### Real-ESRGAN: Training Real-World Blind Super-Resolution with Pure Synthetic Data
