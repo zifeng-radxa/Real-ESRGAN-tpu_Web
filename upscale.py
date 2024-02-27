@@ -47,7 +47,7 @@ class EngineOV:
         return results
 
 class Upscale():
-    def __init__(self, input_path, output_path, model_name, tmp_path=None, type=None, num_worker=1, face_enhance=None):
+    def __init__(self, input_path, output_path, model_name, tmp_path=None, type=None, face_enhance=None, num_worker=1):
         self.model_name = model_name
         self.type = type
         self.num_worker = int(num_worker)
@@ -56,16 +56,18 @@ class Upscale():
         self.input_path = input_path
         self.output_path = output_path
         self.tmp_path = tmp_path
-        self.init_worker()
-
-        self.video_info = {}
-        # self.video_writer, self.cap = self.get_video_info
-        # self.frames_even = []
+        self.face_enhance = face_enhance
         self.inference_frames = []
         self.thread = []
-        self.face_enhance = face_enhance
         self.face_models = []
         self.pars_models = []
+        self.video_info = {}
+        self.init_worker()
+
+
+        # self.video_writer, self.cap = self.get_video_info
+        # self.frames_even = []
+
 
     def init_worker(self):
         for i in range(self.num_worker):
@@ -255,9 +257,9 @@ class Upscale():
 
                 from face_enhance import FaceEnhance
                 face_enhancer = FaceEnhance(self.worker[0], self.face_models[0], self.pars_models[0])
-                output = face_enhancer.run(self.frames[0]['data'], tqdm_tool)
+                output = face_enhancer.run(self.frames[0][0]['data'], tqdm_tool)
                 if pad_black:
-                    self.inference_frames[0]['data'] = self.inference_frames[0]['data'][pad_black[0]*4:1920-pad_black[1]*4, pad_black[2]*4:2560-pad_black[3]*4, :]
+                    output = output[pad_black[0]*4:1920-pad_black[1]*4, pad_black[2]*4:2560-pad_black[3]*4, :]
                 tqdm_tool.update(1)
 
                 cv2.imwrite(self.output_path, output)

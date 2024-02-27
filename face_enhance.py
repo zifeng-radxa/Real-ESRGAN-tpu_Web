@@ -4,7 +4,7 @@ from GFPGAN.gfpgan import GFPGANer
 class FaceEnhance():
     def __init__(self, upsampler, face_bmodel, pars_bmodel):
         self.face_enhancer = GFPGANer(
-            model_path='./weight/GFPGANv1.3.pth',
+            model_path='./model/GFPGANv1.3.pth',
             upscale=4,
             arch='clean',
             channel_multiplier=2,
