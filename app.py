@@ -12,7 +12,6 @@ model_list = ['RealESRGAN_x4plus_BF16_rgb_1_3_480_640.bmodel',
               'RealESRGAN_x4plus_anime_6B_rgb_1_3_480_640.bmodel',
               'realesr-animevideo_v3_rgb_1_3_480_640.bmodel',
               'realesr-general-x4v3_dni_0_2_rgb_1_3_480_640.bmodel',
-              'realesr-animevideo_v3_rgb_1_3_480_640.bmodel'
               ]
 
 DEVICE_ID = 0
@@ -111,7 +110,11 @@ if __name__ == '__main__':
                                            step=1)
                     with model_c:
                         model_name = st.selectbox(label="Model", options=model_list, index=3,
-                                                  key="video_model")
+                                                  key="video_model",
+                                                  help="RealESRGAN_x4plus for all scencs. \
+                                                  RealESRGAN_x4plus_anime_6B optimized for anime images with much smaller model size.  \
+                                                  realesr-animevideo_v3 optimized for anime videos. \
+                                                  realesr-general-x4v3 a tiny small model for general scenes.")
 
             audio = st.checkbox(label="Audio output", help="output video include audio")
         if button:

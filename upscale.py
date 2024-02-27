@@ -7,6 +7,7 @@ import numpy as np
 from util import fuse_audio_with_ffmpeg, resize_video
 import cv2
 from threading import Thread
+from tools.writer import Writer
 import uuid
 MODEL_PATH = './model/'
 DEVICE_ID = 0
@@ -46,7 +47,7 @@ class EngineOV:
         return results
 
 class Upscale():
-    def __init__(self, input_path, output_path, model_name, tmp_path=None, type=None, num_worker=1):
+    def __init__(self, input_path, output_path, model_name, tmp_path=None, type=None, num_worker=1, face_enhance=None):
         self.model_name = model_name
         self.type = type
         self.num_worker = int(num_worker)
@@ -62,12 +63,27 @@ class Upscale():
         # self.frames_even = []
         self.inference_frames = []
         self.thread = []
+        self.face_enhance = face_enhance
+        self.face_models = []
+        self.pars_models = []
 
     def init_worker(self):
         for i in range(self.num_worker):
             model = load_model(self.model_name)
             self.worker.append(model)
             self.frames.append([])
+        if self.face_enhance:
+            self.init_face_pars_model()
+    def init_face_pars_model(self):
+        for i in range(self.num_worker):
+            model_reretinaface_resnet50 = load_model('retinaface_resnet50_rgb_1_3_480_640.bmodel')
+            self.face_models.append(model_reretinaface_resnet50)
+
+        for i in range(self.num_worker):
+            model_parsing_parsenet = load_model('parsing_parsenet_rgb_1_3_512_512.bmodel')
+            self.pars_models.append(model_parsing_parsenet)
+
+        # self.fa
 
     def clean_cache(self):
         for i in self.frames:
@@ -79,12 +95,12 @@ class Upscale():
     def model_inference(self, model, frame, tqdm_tool):
         for i in frame:
             res = model([np.expand_dims(i['data'], axis=0)])[0]
-
             # res = model([np.array([i["data"]])])[0]
-            # 将图像从 chw 转换回 hwc
-            frame_hwc = np.transpose(res, (0, 2, 3, 1))[0] * 255.0
+            # 将图像从 chw 转换回 hwc, rgb->brg
+            frame_hwc = np.transpose(res[:, [2, 1, 0], :, :], (0, 2, 3, 1))[0] * 255.0
             # 数据类型转回 uint8（为了写入到视频中）
             frame_hwc = np.clip(frame_hwc, 0, 255).astype(np.uint8)
+            # frame_hwc = cv2.cvtColor(frame_hwc, cv2.COLOR_RGB2BGR)
             # 将处理后的帧写入到输出视频
             self.inference_frames.append({"id": i["id"], "data": frame_hwc})
             tqdm_tool.update(1)
@@ -130,13 +146,14 @@ class Upscale():
             self.video_info['fps'] = self.cap.get(cv2.CAP_PROP_FPS)
             self.video_info['all_frame_num'] = int(self.cap.get(cv2.CAP_PROP_FRAME_COUNT))
 
+            self.writer = Writer(audio_check, self.output_path, self.tmp_path, self.video_info['fps'])
             fourcc = cv2.VideoWriter_fourcc(*'avc1')
             self.video_writer = cv2.VideoWriter(self.tmp_path,
                                                 fourcc,
                                                 self.video_info['fps'],
                                                 (self.video_info['width'] * 4, self.video_info['height'] * 4))
 
-            SPLIT = 200
+            SPLIT = 50
             print(self.video_info)
             total_task = self.video_info['all_frame_num'] // SPLIT + 1
             left_frame = self.video_info['all_frame_num'] % SPLIT
@@ -145,31 +162,32 @@ class Upscale():
             each_task_frame.append(left_frame)
             print("This would split {} tasks".format(total_task))
 
-            for task_frame in each_task_frame:
+            for index, task_frame in enumerate(each_task_frame):
                 self.clean_cache()
+                print("TASK: {}".format(index))
+                print("capture frame: ")
                 tqdm_tool = tqdm(total=task_frame)
                 start = time.time()
                 for i in range(task_frame):
-                # while True:
                     ret, frame = self.cap.read()
                     # 如果视频读取完毕，跳出循环
                     if not ret:
                         break
                     # 数据类型转换为 float32
+                    # frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                     frame = frame.astype(np.float32)
-                    # 将图像从 hwc 转换为 chw
-                    frame_chw = np.transpose(frame, (2, 0, 1))
+                    # 将图像从 hwc 转换为 chw, bgr->rgb
+                    frame_chw = np.transpose(frame[:, :, [2, 1, 0]], (2, 0, 1))
                     # 例如，这里你可以进行其他处理
                     frame_chw = frame_chw / 255.0
                     worker = i % self.num_worker
                     self.frames[worker].append({"id": i, "data": frame_chw})
                     tqdm_tool.update(1)
                 tqdm_tool.close()
-                print("frame ready")
                 print(str(round((time.time() - start) * 1000, 3)) + " ms")
 
 
-
+                print("frame inference: ")
                 tqdm_tool = tqdm(total=task_frame)
                 start = time.time()
                 for index, worker in enumerate(self.worker):
@@ -183,12 +201,25 @@ class Upscale():
                 tqdm_tool.close()
                 print(str(round((time.time() - start) * 1000, 3)) + " ms")
 
+                # use ffmpeg
+                # tqdm_tool = tqdm(total=task_frame)
+                # start = time.time()
+                # print("encode frame: ")
+                # self.inference_frames = sorted(self.inference_frames, key=lambda x: x["id"])
+                # for i in self.inference_frames:
+                #     self.writer.write_frame(i["data"])
+                #     # tqdm_tool.update(1)
+                #     # self.tqdm.update(1)
+                # # self.tqdm.close()
+                # # 释放视频对象
+                # # tqdm_tool.close()
+                # print(str(round((time.time() - start) * 1000, 3)) + " ms")
 
-
+                # use opencv encode
+                print("encode frame: ")
                 tqdm_tool = tqdm(total=task_frame)
                 start = time.time()
                 self.inference_frames = sorted(self.inference_frames, key=lambda x: x["id"])
-
                 for i in self.inference_frames:
                     self.video_writer.write(i["data"])
                     tqdm_tool.update(1)
@@ -199,7 +230,8 @@ class Upscale():
                 print(str(round((time.time() - start) * 1000, 3)) + " ms")
 
             self.cap.release()
-            self.video_writer.release()
+            # self.video_writer.release()
+            self.writer.close()
             self.worker.clear()
 
             if audio_check:
@@ -210,31 +242,53 @@ class Upscale():
 
 
         elif self.type == 'image':
-            img = cv2.imread(self.input_path)
-            h, w = img.shape[0:2]
-            pad_black = None
-            if h != 480 or w != 640:
-                img, pad_black = self.ratio_resize(img)
+            if self.face_enhance:
+                img = cv2.imread(self.input_path)
+                # img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+                h, w = img.shape[0:2]
+                pad_black = None
+                if h != 480 or w != 640:
+                    img, pad_black = self.ratio_resize(img)
 
-            img = img.astype(np.float32)
-            # 将图像从 hwc 转换为 chw
-            frame_chw = np.transpose(img, (2, 0, 1))
-            # 例如，这里你可以进行其他处理
-            frame_chw = frame_chw / 255.0
-            self.frames[0].append({"id": 1, "data": frame_chw})
-            tqdm_tool = tqdm(total=1)
-            self.model_inference(self.worker[0], self.frames[0], tqdm_tool=tqdm_tool)
-            if pad_black:
-                self.inference_frames[0]['data'] = self.inference_frames[0]['data'][pad_black[0]*4:1920-pad_black[1]*4, pad_black[2]*4:2560-pad_black[3]*4, :]
+                self.frames[0].append({"id": 1, "data": img})
+                tqdm_tool = tqdm(total=3)
 
-            cv2.imwrite(self.output_path, self.inference_frames[0]['data'])
+                from face_enhance import FaceEnhance
+                face_enhancer = FaceEnhance(self.worker[0], self.face_models[0], self.pars_models[0])
+                output = face_enhancer.run(self.frames[0]['data'], tqdm_tool)
+                if pad_black:
+                    self.inference_frames[0]['data'] = self.inference_frames[0]['data'][pad_black[0]*4:1920-pad_black[1]*4, pad_black[2]*4:2560-pad_black[3]*4, :]
+                tqdm_tool.update(1)
+
+                cv2.imwrite(self.output_path, output)
+
+            else:
+                img = cv2.imread(self.input_path)
+                # img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+                h, w = img.shape[0:2]
+                pad_black = None
+                if h != 480 or w != 640:
+                    img, pad_black = self.ratio_resize(img)
+
+                img = img.astype(np.float32)
+                # 将图像从 hwc 转换为 chw, bgr -> rgb
+                frame_chw = np.transpose(img[:, :, [2, 1, 0]], (2, 0, 1))
+                # 例如，这里你可以进行其他处理
+                frame_chw = frame_chw / 255.0
+                self.frames[0].append({"id": 1, "data": frame_chw})
+                tqdm_tool = tqdm(total=1)
+                # if not face_enhance:
+                self.model_inference(self.worker[0], self.frames[0], tqdm_tool=tqdm_tool)
+
+
+                if pad_black:
+                    self.inference_frames[0]['data'] = self.inference_frames[0]['data'][pad_black[0]*4:1920-pad_black[1]*4, pad_black[2]*4:2560-pad_black[3]*4, :]
+
+                cv2.imwrite(self.output_path, self.inference_frames[0]['data'])
+
             self.clean_cache()
             self.worker.clear()
-
+            self.face_models.clear()
+            self.pars_models.clear()
 
             return self.output_path
-
-
-
-
-
