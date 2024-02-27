@@ -4,6 +4,8 @@ import time
 MODEL_PATH = './model/'
 DEVICE_ID = 0
 
+
+
 def load_model(model_name):
     model = EngineOV(model_path=os.path.join(MODEL_PATH, model_name), batch=1, device_id=DEVICE_ID)
     return model

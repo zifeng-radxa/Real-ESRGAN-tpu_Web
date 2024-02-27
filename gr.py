@@ -24,8 +24,8 @@ def run(input_path, model, type, num_worker=1, audio_check=None, face_enhance=No
     result_path = up(audio_check)
     # except Exception as e:
     #     print(e)
-        # gr.Error("Error, please check the info box")
-        # return (e, None)
+    #     gr.Error("Error, please check the info box")
+    #     return (e, None)
 
     return ("Success upscale, click download icon to download to local", result_path)
 

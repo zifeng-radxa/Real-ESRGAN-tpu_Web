@@ -8,6 +8,7 @@
 
 **🌠Support models:** *RealESRGAN_x4plus*, *RealESRGAN_x4plus_anime_6B*, *realesr-animevideo_v3*, *realesr-general-x4v3* 
 
+**🏆Support Face Enhance**
 
 ### Real-ESRGAN: Training Real-World Blind Super-Resolution with Pure Synthetic Data
 
@@ -26,14 +27,24 @@
   ```bash
   git clone https://github.com/zifeng-radxa/Real-ESRGAN-tpu_Web.git
   ```
+- Clone the tool-box
+  ```bash
+  cd Real-ESRGAN-tpu_Web
+  git clone https://github.com/zifeng-radxa/GFPGAN.git
+  git clone https://github.com/zifeng-radxa/FACEXLIB.git
+  ```
 
 - Setup environment (use sophon-opencv, please setup follow Sophon-mw instruction)
 
   ```bash
+  pip3 install basicsr -i https://pypi.python.org/simple
   pip3 install -r requirements.txt
   pip3 install https://github.com/radxa-edge/TPU-Edge-AI/releases/download/v0.1.0/tpu_perf-1.2.31-py3-none-manylinux2014_aarch64.whl
   ```
-
+- Download models
+  ```bash
+  python3 download_models.py
+  ```
 - Run the boot script
   - Run by gradio
   ```bash

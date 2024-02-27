@@ -7,44 +7,15 @@ import numpy as np
 from util import fuse_audio_with_ffmpeg, resize_video
 import cv2
 from threading import Thread
-from tools.writer import Writer
+# from tools.writer import Writer
 import uuid
-MODEL_PATH = './model/'
-DEVICE_ID = 0
+from tools.tpu_utils import load_model
 
 try:
     del os.environ["LD_LIBRARY_PATH"]
 except Exception as e:
     pass
 
-
-def load_model(model_name):
-    model = EngineOV(model_path=os.path.join(MODEL_PATH, model_name), batch=1, device_id=DEVICE_ID)
-    return model
-
-class EngineOV:
-    def __init__(self, model_path="", batch=1 ,device_id=0) :
-        if "DEVICE_ID" in os.environ:
-            device_id = int(os.environ["DEVICE_ID"])
-            print(">>>> device_id is in os.environ. and device_id = " ,device_id)
-        self.model = SGInfer(model_path , batch=batch, devices=[device_id])
-
-    def __str__(self):
-        return "EngineOV: model_path={}, device_id={}".format(self.model_path ,self.device_id)
-
-    def __call__(self, args):
-        start = time.time()
-        if isinstance(args, list):
-            values = args
-        elif isinstance(args, dict):
-            values = list(args.values())
-        else:
-            raise TypeError("args is not list or dict")
-            # print(values)
-        task_id = self.model.put(*values)
-        task_id, results, valid = self.model.get()
-        # print(str(round((time.time() - start) * 1000, 3)) + " ms")
-        return results
 
 class Upscale():
     def __init__(self, input_path, output_path, model_name, tmp_path=None, type=None, face_enhance=None, num_worker=1):
@@ -148,7 +119,7 @@ class Upscale():
             self.video_info['fps'] = self.cap.get(cv2.CAP_PROP_FPS)
             self.video_info['all_frame_num'] = int(self.cap.get(cv2.CAP_PROP_FRAME_COUNT))
 
-            self.writer = Writer(audio_check, self.output_path, self.tmp_path, self.video_info['fps'])
+            # self.writer = Writer(audio_check, self.output_path, self.tmp_path, self.video_info['fps'])
             fourcc = cv2.VideoWriter_fourcc(*'avc1')
             self.video_writer = cv2.VideoWriter(self.tmp_path,
                                                 fourcc,
@@ -232,8 +203,8 @@ class Upscale():
                 print(str(round((time.time() - start) * 1000, 3)) + " ms")
 
             self.cap.release()
-            # self.video_writer.release()
-            self.writer.close()
+            self.video_writer.release()
+            # self.writer.close()
             self.worker.clear()
 
             if audio_check:
