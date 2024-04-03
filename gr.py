@@ -3,10 +3,10 @@ import uuid
 import gradio as gr
 from upscale import Upscale
 
-model_list = ['RealESRGAN_x4plus_BF16_rgb_1_3_480_640.bmodel',
-              'RealESRGAN_x4plus_anime_6B_rgb_1_3_480_640.bmodel',
-              'realesr-animevideo_v3_rgb_1_3_480_640.bmodel',
-              'realesr-general-x4v3_dni_0_2_rgb_1_3_480_640.bmodel',
+model_list = ['RealESRGAN_x4plus_rgb_1684x_BF16.bmodel',
+              'RealESRGAN_x4plus_anime_6B_rgb_bm1684x_BF16.bmodel',
+              'realesr-animevideov3_rgb_bm1684x_BF16.bmodel',
+              'realesr-general-x4v3_dni_0_2_rgb_1684x_BF16.bmodel',
               ]
 
 
@@ -80,7 +80,7 @@ if __name__ == '__main__':
                         start_button = gr.Button("Start improve", variant="primary")
                         face_enhance_2 = gr.Checkbox(
                             label="face enhance",
-                            info="enhance real world face (GFPGANv1Clean run by CPU) it would take time"
+                            info="enhance real world face (CodeFormer)"
                         )
                         audio_check = gr.Checkbox(
                             label="audio",

@@ -32,6 +32,7 @@ class Upscale():
         self.thread = []
         self.face_models = []
         self.pars_models = []
+        self.gfgan_models = []
         self.video_info = {}
         self.init_worker()
 
@@ -49,12 +50,16 @@ class Upscale():
             self.init_face_pars_model()
     def init_face_pars_model(self):
         for i in range(self.num_worker):
-            model_reretinaface_resnet50 = load_model('retinaface_resnet50_rgb_1_3_480_640.bmodel')
+            model_reretinaface_resnet50 = load_model('retinaface_resnet50_rgb_1684x_BF16.bmodel')
             self.face_models.append(model_reretinaface_resnet50)
 
         for i in range(self.num_worker):
-            model_parsing_parsenet = load_model('parsing_parsenet_rgb_1_3_512_512.bmodel')
+            model_parsing_parsenet = load_model('parsing_parsenet_rgb_1684x_BF16.bmodel')
             self.pars_models.append(model_parsing_parsenet)
+
+        for i in range(self.num_worker):
+            model_gfgan = load_model('codeformer_1-3-512-512_1-235ms.bmodel')
+            self.gfgan_models.append(model_gfgan)
 
         # self.fa
 
@@ -224,10 +229,10 @@ class Upscale():
                     img, pad_black = self.ratio_resize(img)
 
                 self.frames[0].append({"id": 1, "data": img})
-                tqdm_tool = tqdm(total=3)
+                tqdm_tool = tqdm(total=4)
 
                 from face_enhance import FaceEnhance
-                face_enhancer = FaceEnhance(self.worker[0], self.face_models[0], self.pars_models[0])
+                face_enhancer = FaceEnhance(self.worker[0], self.face_models[0], self.pars_models[0], self.gfgan_models[0])
                 output = face_enhancer.run(self.frames[0][0]['data'], tqdm_tool)
                 if pad_black:
                     output = output[pad_black[0]*4:1920-pad_black[1]*4, pad_black[2]*4:2560-pad_black[3]*4, :]
