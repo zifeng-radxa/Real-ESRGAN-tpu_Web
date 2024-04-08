@@ -54,8 +54,9 @@ class FaceRestorerCodeFormer():
         self.face_helper.get_face_landmarks_5(only_center_face=only_center_face, eye_dist_threshold=5)
         self.face_helper.align_warp_face()
 
-        tqdm_tool.update(1)
-        print("face detect: {}".format((time.time() - time0) * 1000))
+        if tqdm_tool is not None:
+            tqdm_tool.update(1)
+        # print("face detect: {}".format((time.time() - time0) * 1000))
 
 
         for cropped_face in self.face_helper.cropped_faces:
@@ -71,7 +72,7 @@ class FaceRestorerCodeFormer():
                         0]  ## the dtype must be explicitly set
                     restored_face = tensor2img(torch.from_numpy(output).squeeze(0), rgb2bgr=True, min_max=(-1, 1))
                 del output
-                print("face enhance: {}".format((time.time() - time0) * 1000))
+                # print("face enhance: {}".format((time.time() - time0) * 1000))
 
             except Exception:
                 print('Failed inference for CodeFormer')
@@ -80,7 +81,8 @@ class FaceRestorerCodeFormer():
             restored_face = restored_face.astype('uint8')
             self.face_helper.add_restored_face(restored_face)
 
-        tqdm_tool.update(1)
+        if tqdm_tool is not None:
+            tqdm_tool.update(1)
 
         if not has_aligned and paste_back:
             # upsample the background
@@ -91,10 +93,12 @@ class FaceRestorerCodeFormer():
 
                 # Now only support RealESRGAN for upsampling background
                 time0 = time.time()
-                print(frame_chw.shape)
+                # print(frame_chw.shape)
                 res = self.bg_upsampler([np.expand_dims(frame_chw, axis=0)])[0]
-                print("bg upsampler: {}".format((time.time() - time0) * 1000))
-                tqdm_tool.update(1)
+                # print("bg upsampler: {}".format((time.time() - time0) * 1000))
+
+                if tqdm_tool is not None:
+                    tqdm_tool.update(1)
 
                 # res = model([np.array([i["data"]])])[0]
                 # 将图像从 chw 转换回 hwc, rgb->brg
@@ -110,8 +114,9 @@ class FaceRestorerCodeFormer():
             # paste each restored face to the input image
             time0 = time.time()
             restored_img = self.face_helper.paste_faces_to_input_image(upsample_img=bg_img)
-            print("paste_face: {}".format((time.time() - time0) * 1000))
-            tqdm_tool.update(1)
+            # print("paste_face: {}".format((time.time() - time0) * 1000))
+            if tqdm_tool is not None:
+                tqdm_tool.update(1)
 
             return self.face_helper.cropped_faces, self.face_helper.restored_faces, restored_img
         else:

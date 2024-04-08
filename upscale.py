@@ -4,11 +4,10 @@ from tpu_perf.infer import SGInfer
 from tqdm import tqdm
 import gradio as gr
 import numpy as np
-from util import fuse_audio_with_ffmpeg, resize_video
+from tools.utils import fuse_audio_with_ffmpeg, resize_video
 import cv2
 from threading import Thread
 # from tools.writer import Writer
-import uuid
 from tools.tpu_utils import load_model
 
 try:
@@ -32,7 +31,7 @@ class Upscale():
         self.thread = []
         self.face_models = []
         self.pars_models = []
-        self.gfgan_models = []
+        self.enhance_models = []
         self.video_info = {}
         self.init_worker()
 
@@ -58,8 +57,8 @@ class Upscale():
             self.pars_models.append(model_parsing_parsenet)
 
         for i in range(self.num_worker):
-            model_gfgan = load_model('codeformer_1-3-512-512_1-235ms.bmodel')
-            self.gfgan_models.append(model_gfgan)
+            model_enhance = load_model('codeformer_1-3-512-512_1-235ms.bmodel')
+            self.enhance_models.append(model_enhance)
 
         # self.fa
 
@@ -139,73 +138,118 @@ class Upscale():
             each_task_frame = [SPLIT for _ in range(total_task - 1)]
             each_task_frame.append(left_frame)
             print("This would split {} tasks".format(total_task))
-
+            print(each_task_frame)
             for index, task_frame in enumerate(each_task_frame):
                 self.clean_cache()
                 print("TASK: {}".format(index))
-                print("capture frame: ")
-                tqdm_tool = tqdm(total=task_frame)
-                start = time.time()
-                for i in range(task_frame):
-                    ret, frame = self.cap.read()
-                    # 如果视频读取完毕，跳出循环
-                    if not ret:
-                        break
-                    # 数据类型转换为 float32
-                    # frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                    frame = frame.astype(np.float32)
-                    # 将图像从 hwc 转换为 chw, bgr->rgb
-                    frame_chw = np.transpose(frame[:, :, [2, 1, 0]], (2, 0, 1))
-                    # 例如，这里你可以进行其他处理
-                    frame_chw = frame_chw / 255.0
-                    worker = i % self.num_worker
-                    self.frames[worker].append({"id": i, "data": frame_chw})
-                    tqdm_tool.update(1)
-                tqdm_tool.close()
-                print(str(round((time.time() - start) * 1000, 3)) + " ms")
+
+                if self.face_enhance:
+                    from face_enhance import FaceEnhance
+                    tqdm_tool = tqdm(total=task_frame)
+                    start = time.time()
+                    for i in range(task_frame):
+                        ret, frame = self.cap.read()
+                        # 如果视频读取完毕，跳出循环
+                        if not ret:
+                            break
+                        worker = i % self.num_worker
+                        self.frames[worker].append({"id": i, "data": frame})
+                        tqdm_tool.update(1)
+                    tqdm_tool.close()
+                    print("capture frame: {} ms".format(round((time.time() - start) * 1000, 3)))
+
+                    tqdm_tool = tqdm(total=task_frame)
+                    start = time.time()
+                    for index, worker in enumerate(self.worker):
+                        face_enhancer = FaceEnhance(self.worker[index], self.face_models[index], self.pars_models[index],
+                                                    self.enhance_models[index])
+
+                        t = Thread(target=face_enhancer.run, args=(self.frames[index], self.inference_frames, tqdm_tool))
+                        self.thread.append(t)
+                    for i in self.thread:
+                        i.start()
+
+                    for i in self.thread:
+                        i.join()
+                    tqdm_tool.close()
+                    print("frame inference: {} ms".format(round((time.time() - start) * 1000, 3)))
+
+                    tqdm_tool = tqdm(total=task_frame)
+                    start = time.time()
+                    self.inference_frames = sorted(self.inference_frames, key=lambda x: x["id"])
+                    for _ in range(len(self.inference_frames)):
+                        self.video_writer.write(self.inference_frames.pop(0)["data"])
+                        tqdm_tool.update(1)
+                        # self.tqdm.update(1)
+                    # self.tqdm.close()
+                    # 释放视频对象
+                    tqdm_tool.close()
+                    print("encode frame: {} ms".format(round((time.time() - start) * 1000, 3)))
+
+                else:
+                    tqdm_tool = tqdm(total=task_frame)
+                    start = time.time()
+                    for i in range(task_frame):
+                        ret, frame = self.cap.read()
+                        # 如果视频读取完毕，跳出循环
+                        if not ret:
+                            break
+                        # 数据类型转换为 float32
+                        # frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                        frame = frame.astype(np.float32)
+                        # 将图像从 hwc 转换为 chw, bgr->rgb
+                        frame_chw = np.transpose(frame[:, :, [2, 1, 0]], (2, 0, 1))
+                        # 例如，这里你可以进行其他处理
+                        frame_chw = frame_chw / 255.0
+                        worker = i % self.num_worker
+                        self.frames[worker].append({"id": i, "data": frame_chw})
+                        tqdm_tool.update(1)
+                    tqdm_tool.close()
+                    print("\ncapture frame: {} ms\n".format(round((time.time() - start) * 1000, 3)))
 
 
-                print("frame inference: ")
-                tqdm_tool = tqdm(total=task_frame)
-                start = time.time()
-                for index, worker in enumerate(self.worker):
-                    t = Thread(target=self.model_inference, args=(worker, self.frames[index], tqdm_tool))
-                    self.thread.append(t)
-                for i in self.thread:
-                    i.start()
+                    tqdm_tool = tqdm(total=task_frame)
+                    start = time.time()
+                    for index, worker in enumerate(self.worker):
+                        t = Thread(target=self.model_inference, args=(worker, self.frames[index], tqdm_tool))
+                        self.thread.append(t)
+                    for i in self.thread:
+                        i.start()
 
-                for i in self.thread:
-                    i.join()
-                tqdm_tool.close()
-                print(str(round((time.time() - start) * 1000, 3)) + " ms")
+                    for i in self.thread:
+                        i.join()
+                    tqdm_tool.close()
+                    print("\nframe inference: {} ms\n".format(round((time.time() - start) * 1000, 3)))
 
-                # use ffmpeg
-                # tqdm_tool = tqdm(total=task_frame)
-                # start = time.time()
-                # print("encode frame: ")
-                # self.inference_frames = sorted(self.inference_frames, key=lambda x: x["id"])
-                # for i in self.inference_frames:
-                #     self.writer.write_frame(i["data"])
-                #     # tqdm_tool.update(1)
-                #     # self.tqdm.update(1)
-                # # self.tqdm.close()
-                # # 释放视频对象
-                # # tqdm_tool.close()
-                # print(str(round((time.time() - start) * 1000, 3)) + " ms")
 
-                # use opencv encode
-                print("encode frame: ")
-                tqdm_tool = tqdm(total=task_frame)
-                start = time.time()
-                self.inference_frames = sorted(self.inference_frames, key=lambda x: x["id"])
-                for i in self.inference_frames:
-                    self.video_writer.write(i["data"])
-                    tqdm_tool.update(1)
-                    # self.tqdm.update(1)
-                # self.tqdm.close()
-                # 释放视频对象
-                tqdm_tool.close()
-                print(str(round((time.time() - start) * 1000, 3)) + " ms")
+
+                    # use ffmpeg
+                    # tqdm_tool = tqdm(total=task_frame)
+                    # start = time.time()
+                    # print("encode frame: ")
+                    # self.inference_frames = sorted(self.inference_frames, key=lambda x: x["id"])
+                    # for i in self.inference_frames:
+                    #     self.writer.write_frame(i["data"])
+                    #     # tqdm_tool.update(1)
+                    #     # self.tqdm.update(1)
+                    # # self.tqdm.close()
+                    # # 释放视频对象
+                    # # tqdm_tool.close()
+                    # print(str(round((time.time() - start) * 1000, 3)) + " ms")
+
+                    # use opencv encode
+
+                    tqdm_tool = tqdm(total=task_frame)
+                    start = time.time()
+                    self.inference_frames = sorted(self.inference_frames, key=lambda x: x["id"])
+                    for i in self.inference_frames:
+                        self.video_writer.write(i["data"])
+                        tqdm_tool.update(1)
+                        # self.tqdm.update(1)
+                    # self.tqdm.close()
+                    # 释放视频对象
+                    tqdm_tool.close()
+                    print("\nencode frame: {} ms\n".format(round((time.time() - start) * 1000, 3)))
 
             self.cap.release()
             self.video_writer.release()
@@ -232,13 +276,13 @@ class Upscale():
                 tqdm_tool = tqdm(total=4)
 
                 from face_enhance import FaceEnhance
-                face_enhancer = FaceEnhance(self.worker[0], self.face_models[0], self.pars_models[0], self.gfgan_models[0])
-                output = face_enhancer.run(self.frames[0][0]['data'], tqdm_tool)
+                face_enhancer = FaceEnhance(self.worker[0], self.face_models[0], self.pars_models[0], self.enhance_models[0])
+                face_enhancer.run(self.frames[0][0], self.inference_frames, tqdm_tool)
                 if pad_black:
-                    output = output[pad_black[0]*4:1920-pad_black[1]*4, pad_black[2]*4:2560-pad_black[3]*4, :]
+                    self.inference_frames[0]['data'] = self.inference_frames[0]['data'][pad_black[0]*4:1920-pad_black[1]*4, pad_black[2]*4:2560-pad_black[3]*4, :]
                 tqdm_tool.update(1)
 
-                cv2.imwrite(self.output_path, output)
+                cv2.imwrite(self.output_path, self.inference_frames[0]['data'])
 
             else:
                 img = cv2.imread(self.input_path)

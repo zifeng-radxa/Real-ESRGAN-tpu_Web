@@ -1,4 +1,4 @@
-from GFPGAN.gfpgan.utils import GFPGANer
+# from GFPGAN.gfpgan.utils import GFPGANer
 from CodeFormer import FaceRestorerCodeFormer
 
 class FaceEnhance():
@@ -22,6 +22,16 @@ class FaceEnhance():
 
         )
 
-    def run(self, img, tqdm_tool=None):
-        _, _, output = self.face_enhancer.enhance(img, has_aligned=False, only_center_face=False, paste_back=True, tqdm_tool=tqdm_tool)
-        return output
+    def run(self, img, inference_frames, tqdm_tool=None):
+        if isinstance(img, list):
+            for _ in range(len(img)):
+                _img = img.pop()
+                _, _, output = self.face_enhancer.enhance(_img['data'], has_aligned=False, only_center_face=False,
+                                                          paste_back=True, tqdm_tool=None)
+                inference_frames.append({"id": _img["id"], "data": output})
+                tqdm_tool.update(1)
+
+        else:
+            _, _, output = self.face_enhancer.enhance(img['data'], has_aligned=False, only_center_face=False, paste_back=True, tqdm_tool=tqdm_tool)
+            inference_frames.append({"id": img["id"], "data": output})
+        # return output
