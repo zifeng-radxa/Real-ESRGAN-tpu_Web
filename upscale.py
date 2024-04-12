@@ -70,17 +70,36 @@ class Upscale():
         self.thread.clear()
 
     def model_inference(self, model, frame, tqdm_tool):
-        for i in frame:
-            res = model([np.expand_dims(i['data'], axis=0)])[0]
+        for i in range(0, len(frame), 3):
+            n_frame_list = []
+            n_id = []
+            for i in range(3):
+                if frame:
+                    _frame = frame.pop()
+                    n_frame_list.append(_frame["data"])
+                    n_id.append(_frame["id"])
+            # if len(n_frame) == 0:
+            #     continue
+            # print(len(n_frame_list))
+            n_frame = np.stack(n_frame_list)
+            # print(n_frame.shape)
+            del n_frame_list
+            # res = model([np.expand_dims(i['data'], axis=0)])[0]
+            # print(i['data'].shape)
+            time0 = time.time()
+            res = model([n_frame])[0]
+            print("model infrence: {} ms".format((time.time() - time0) * 1000))
+            # print(res.shape)
             # res = model([np.array([i["data"]])])[0]
             # 将图像从 chw 转换回 hwc, rgb->brg
-            frame_hwc = np.transpose(res[:, [2, 1, 0], :, :], (0, 2, 3, 1))[0] * 255.0
+            frame_hwc = np.transpose(res[:, [2, 1, 0], :, :], (0, 2, 3, 1)) * 255.0
             # 数据类型转回 uint8（为了写入到视频中）
             frame_hwc = np.clip(frame_hwc, 0, 255).astype(np.uint8)
             # frame_hwc = cv2.cvtColor(frame_hwc, cv2.COLOR_RGB2BGR)
             # 将处理后的帧写入到输出视频
-            self.inference_frames.append({"id": i["id"], "data": frame_hwc})
-            tqdm_tool.update(1)
+            for i in range(len(n_id)):
+                self.inference_frames.append({"id": n_id[i], "data": frame_hwc[i]})
+            tqdm_tool.update(len(n_id))
 
         # print(t_name + " inference finish")
 
@@ -176,9 +195,9 @@ class Upscale():
 
                     tqdm_tool = tqdm(total=task_frame)
                     start = time.time()
-                    self.inference_frames = sorted(self.inference_frames, key=lambda x: x["id"])
+                    self.inference_frames = sorted(self.inference_frames, key=lambda x: x["id"], reverse=True)
                     for _ in range(len(self.inference_frames)):
-                        self.video_writer.write(self.inference_frames.pop(0)["data"])
+                        self.video_writer.write(self.inference_frames.pop()["data"])
                         tqdm_tool.update(1)
                         # self.tqdm.update(1)
                     # self.tqdm.close()
@@ -241,15 +260,15 @@ class Upscale():
 
                     tqdm_tool = tqdm(total=task_frame)
                     start = time.time()
-                    self.inference_frames = sorted(self.inference_frames, key=lambda x: x["id"])
-                    for i in self.inference_frames:
-                        self.video_writer.write(i["data"])
+                    self.inference_frames = sorted(self.inference_frames, key=lambda x: x["id"], reverse=True)
+                    for _ in range(len(self.inference_frames)):
+                        self.video_writer.write(self.inference_frames.pop()["data"])
                         tqdm_tool.update(1)
                         # self.tqdm.update(1)
                     # self.tqdm.close()
                     # 释放视频对象
                     tqdm_tool.close()
-                    print("\nencode frame: {} ms\n".format(round((time.time() - start) * 1000, 3)))
+                    print("encode frame: {} ms".format(round((time.time() - start) * 1000, 3)))
 
             self.cap.release()
             self.video_writer.release()
@@ -297,13 +316,22 @@ class Upscale():
                 frame_chw = np.transpose(img[:, :, [2, 1, 0]], (2, 0, 1))
                 # 例如，这里你可以进行其他处理
                 frame_chw = frame_chw / 255.0
-                self.frames[0].append({"id": 1, "data": frame_chw})
                 tqdm_tool = tqdm(total=1)
+                # test_a = np.zeros((3,3,480,640)).astype(np.float32)
+                # test_a[:1] = frame_chw
+                # print(test_a[0])
+                # test_a = np.stack([frame_chw, frame_chw, frame_chw])
+                # test_a = np.concatenate((frame_chw, frame_chw, frame_chw), axis=0)
+                # test_a = np.concatenate((test_a, frame_chw), axis=0)
+
+                self.frames[0].append({"id": 1, "data": frame_chw})
+
                 # if not face_enhance:
                 self.model_inference(self.worker[0], self.frames[0], tqdm_tool=tqdm_tool)
 
 
                 if pad_black:
+                    print(self.inference_frames[0]['data'].shape)
                     self.inference_frames[0]['data'] = self.inference_frames[0]['data'][pad_black[0]*4:1920-pad_black[1]*4, pad_black[2]*4:2560-pad_black[3]*4, :]
 
                 cv2.imwrite(self.output_path, self.inference_frames[0]['data'])

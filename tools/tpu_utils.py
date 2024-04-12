@@ -29,6 +29,7 @@ class EngineOV:
         else:
             raise TypeError("args is not list or dict")
             # print(values)
+        # print(*values)
         task_id = self.model.put(*values)
         task_id, results, valid = self.model.get()
         # print(str(round((time.time() - start) * 1000, 3)) + " ms")
