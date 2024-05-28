@@ -2,7 +2,7 @@ import gradio as gr
 from run import run, model_list
 
 description = """
-# Real-ESRGAN with BM1684M🛸\n
+# Real-ESRGAN with Airbox🛸\n
 run Real-ESRGAN to upscale video/image resolution by TPU
 ## Model choose
 **RealESRGAN_x4plus**\n
