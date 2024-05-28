@@ -1,6 +1,6 @@
 # Real-ESRGAN-TPU
 
-> Run Real-ESRGAN on BM1684X 
+> Run Real-ESRGAN on SG2300X 
 > 
 **✨Support run by gradio or streamlit**
 
