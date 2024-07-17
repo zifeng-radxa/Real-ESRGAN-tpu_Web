@@ -1,17 +1,9 @@
-import cv2
-import os
-import torch
-from basicsr.utils import img2tensor, tensor2img
 from FACEXLIB.facexlib.utils.face_restoration_helper import FaceRestoreHelper
-from torchvision.transforms.functional import normalize
-
+import cv2
 import numpy as np
 import time
 
 class FaceRestorerCodeFormer():
-    def name(self):
-        return "CodeFormer"
-
     def __init__(self, code_bmodel=None, face_bmodel=None, pars_bmodel=None, bg_upsampler=None):
         self.net = code_bmodel
         # self.face_helper = None
@@ -28,6 +20,35 @@ class FaceRestorerCodeFormer():
             pars_bmodel=pars_bmodel
         )
 
+    def pre_process(self, img):
+        img = img / 255.0
+        img = img.astype('float32')
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        img[:,:,0] = (img[:,:,0]-0.5)/0.5
+        img[:,:,1] = (img[:,:,1]-0.5)/0.5
+        img[:,:,2] = (img[:,:,2]-0.5)/0.5
+        img = np.float32(img[np.newaxis,:,:,:])
+        img = img.transpose(0, 3, 1, 2)
+        return img
+
+    def post_process(self, output):
+        output = output.clip(-1,1)
+        output = (output + 1) / 2
+        output = output.transpose(1, 2, 0)
+        output = (output * 255.0).round()
+
+        return output
+
+    def forward(self, img, w):
+        img = self.pre_process(img)
+        w_np = np.array([w if w is not None else 0.5], dtype=np.float32)
+        # t = timeit.default_timer()
+        # t = time.time()
+        ort_outs = self.net([img, w_np])[0][0]
+        output = self.post_process(ort_outs)
+        # print('infer time:',timeit.default_timer()-t)
+        output = output.astype(np.uint8)
+        return output
     def enhance(self, img, has_aligned=False, only_center_face=False, paste_back=True, w=0.5, tqdm_tool=None, bg_upscale_img=None):
         self.face_helper.clean_all()
         self.face_helper.read_image(img)
@@ -40,22 +61,7 @@ class FaceRestorerCodeFormer():
         # print("face detect: {}".format((time.time() - time0) * 1000))
 
         for cropped_face in self.face_helper.cropped_faces:
-            cropped_face_t = img2tensor(cropped_face / 255., bgr2rgb=True, float32=True)
-            normalize(cropped_face_t, (0.5, 0.5, 0.5), (0.5, 0.5, 0.5), inplace=True)
-            cropped_face_t = cropped_face_t.unsqueeze(0)  # .to(devices.device_codeformer)
-            try:
-                # in: (1, 3, 512, 512)    out: (1, 3, 512, 512) (1, 256, 1024) (1, 256, 16, 16)
-                output = self.net([cropped_face_t.numpy(), np.array([w if w is not None else 0.5], dtype=np.float32)])[
-                        0]  ## the dtype must be explicitly set
-                restored_face = tensor2img(torch.from_numpy(output).squeeze(0), rgb2bgr=False, min_max=(-1, 1))
-            # del output
-                # print("face enhance: {}".format((time.time() - time0) * 1000))
-
-            except Exception:
-                print('Failed inference for CodeFormer')
-                restored_face = cropped_face
-
-            restored_face = restored_face.astype('uint8')
+            restored_face = self.forward(cropped_face, w)
             self.face_helper.add_restored_face(restored_face)
 
         if tqdm_tool is not None:

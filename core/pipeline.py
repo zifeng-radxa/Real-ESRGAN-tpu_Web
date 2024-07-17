@@ -3,7 +3,7 @@ import os
 import uuid
 from tools.utils import get_model_list
 import argparse
-
+import gradio as gr
 model_list = get_model_list()
 image_upscaler = ImageUpscaler()
 
@@ -36,6 +36,7 @@ def image_pipeline(input_path, model, face_enhance=None, background_remove=None,
             output_path = './result/image/out_{}.jpg'.format(uuid.uuid4())
     if input_path is None:
         return ("Please upload image", None)
+
     image_upscaler.change_model(model, face_enhance)
     res = image_upscaler(input_path, output_path, face_enhance)
 

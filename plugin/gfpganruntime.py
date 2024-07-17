@@ -1,7 +1,7 @@
 import numpy as np
 import cv2
 import timeit
-
+import time
 class GFPGANFaceAugment:
     def __init__(self, gfpgan_bmodel, use_gpu = False):
         self.ort_session = gfpgan_bmodel
@@ -14,8 +14,8 @@ class GFPGANFaceAugment:
         self.affine = False
         self.affine_matrix = None
     def pre_process(self, img):
-        img = cv2.resize(img, (int(img.shape[1] / 2), int(img.shape[0] / 2)))
-        img = cv2.resize(img, (self.face_size, self.face_size))
+        # img = cv2.resize(img, (int(img.shape[1] / 2), int(img.shape[0] / 2)))
+        # img = cv2.resize(img, (self.face_size, self.face_size))
         img = img / 255.0
         img = img.astype('float32')
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
@@ -64,7 +64,9 @@ class GFPGANFaceAugment:
         # t = timeit.default_timer()
         # ort_inputs = {self.ort_session.get_inputs()[0].name: img}
         # ort_outs = self.ort_session.run(None, ort_inputs)
+        # t = time.time()
         ort_outs = self.ort_session([img])
+        # print('infer time:',(time.time()-t)*1000)
         output = ort_outs[0][0]
         output, inv_soft_mask = self.post_process(output, height, width)
         # print('infer time:',timeit.default_timer()-t)

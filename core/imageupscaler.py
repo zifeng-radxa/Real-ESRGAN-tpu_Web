@@ -29,16 +29,18 @@ class ImageUpscaler():
         if model_name != self.cur_model_name:
             self.re_upscale_model = load_bmodel(model_name)
             self.cur_model_name = model_name
-            if face_enhance_name != "None" and face_enhance_name != self.cur_face_enhance_name:
-                if face_enhance_name == "CodeFormer":
-                    face_enhance_bmodel = "codeformer_1-3-512-512_1-235ms.bmodel"
-                    self.face_enhance_model = load_bmodel(face_enhance_bmodel)
-                elif face_enhance_name == "GFPGAN":
-                    face_enhance_bmodel = "gfpgan.bmodel"
-                    self.face_enhance_model = load_bmodel(face_enhance_bmodel)
+        if face_enhance_name != "None" and face_enhance_name != self.cur_face_enhance_name:
+            if face_enhance_name == "CodeFormer":
+                face_enhance_bmodel = "codeformer_1-3-512-512_1-235ms.bmodel"
+                self.face_enhance_model = load_bmodel(face_enhance_bmodel)
+            elif face_enhance_name == "GFPGAN":
+                face_enhance_bmodel = "gfpgan.bmodel"
+                self.face_enhance_model = load_bmodel(face_enhance_bmodel)
 
-                self.cur_face_enhance_name = face_enhance_name
+            self.cur_face_enhance_name = face_enhance_name
+            if self.face_detect_model is None:
                 self.face_detect_model = load_bmodel("retinaface_resnet50_rgb_1_3_480_640.bmodel")
+            if self.face_pars_model is None:
                 self.face_pars_model = load_bmodel("parsing_parsenet_rgb_1_3_512_512.bmodel")
 
     def model_inference(self, frame, tqdm_tool):
@@ -67,7 +69,7 @@ class ImageUpscaler():
             img, pad_black = ratio_resize(img)
 
         if face_enhance != "None":
-            tqdm_tool = tqdm(total=4)
+            tqdm_tool = tqdm(total=5)
             img_copy = img.copy()
             img_copy = cv2.cvtColor(img_copy, cv2.COLOR_RGB2BGR)
             img = img.astype(np.float32)
@@ -81,23 +83,21 @@ class ImageUpscaler():
             from plugin.face_enhance import FaceEnhance
             face_enhancer = FaceEnhance(self.re_upscale_model, self.face_detect_model, self.face_pars_model, self.face_enhance_model, name=self.cur_face_enhance_name)
             res_frame = face_enhancer.run(img_copy, tqdm_tool, res_frame)
-            # if pad_black:
-            #     res = res[pad_black[0]*4:1920-pad_black[1]*4, pad_black[2]*4:2560-pad_black[3]*4, :]
-            # # tqdm_tool.update(1)
-            #
-            # cv2.imwrite(self.output_path, self.inference_frames[0]['data'])
 
         else:
+            tqdm_tool = tqdm(total=2)
             img = img.astype(np.float32)
             # 将图像从 hwc 转换为 chw
             frame_chw = np.transpose(img, (2, 0, 1))
             # 归一化
             frame_chw = frame_chw / 255.0
-            tqdm_tool = tqdm(total=1)
             res_frame = self.model_inference(frame_chw, tqdm_tool=tqdm_tool)
+            tqdm_tool.update(1)
+
 
         if pad_black:
             res_frame = res_frame[pad_black[0]*4:1920-pad_black[1]*4, pad_black[2]*4:2560-pad_black[3]*4, :]
+            tqdm_tool.update(1)
         if output_path is not None:
             save_frame = cv2.cvtColor(res_frame, cv2.COLOR_RGB2BGR)
             cv2.imwrite(output_path, save_frame)

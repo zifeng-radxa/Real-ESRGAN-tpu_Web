@@ -1,18 +1,6 @@
-# from GFPGAN.gfpgan.utils import GFPGANer
-from plugin.CodeFormer import FaceRestorerCodeFormer
-from plugin.gfpganer import GFPGANer
+from plugin.face_enhancer import GFPGANer, CodeFormer
 class FaceEnhance():
     def __init__(self, re_upscale_model, face_detect_model, face_pars_model, face_enhance_model, name):
-        # self.face_enhancer = GFPGANer(
-        #     model_path='./model/GFPGANv1.3.pth',
-        #     upscale=4,
-        #     arch='clean',
-        #     channel_multiplier=2,
-        #     bg_upsampler=upsampler,
-        #     face_bmodel = face_bmodel,
-        #     pars_bmodel = pars_bmodel,
-        #     gfgan_bmodel = enhance_bmodel
-        # )
         self.enhance_name = name
         self.face_detect_model = face_detect_model
         self.face_pars_model = face_pars_model
@@ -23,7 +11,7 @@ class FaceEnhance():
 
     def init_enhancer(self):
         if self.enhance_name == "CodeFormer":
-            self.face_enhancer = FaceRestorerCodeFormer(
+            self.face_enhancer = CodeFormer(
                 code_bmodel=self.face_enhance_model,
                 face_bmodel=self.face_detect_model,
                 pars_bmodel=self.face_pars_model,

@@ -12,7 +12,6 @@ run Real-ESRGAN to upscale video/image resolution by TPU
 **realesr-general-x4v3** a tiny small model for general scenes\n
 """
 
-
 if __name__ == '__main__':
     with gr.Blocks(analytics_enabled=False) as demo:
         with gr.Row():
@@ -50,7 +49,8 @@ if __name__ == '__main__':
                 with gr.Column():
                     up_img = gr.Image(label="upload a image to upscale resolution", type="numpy")
                     with gr.Row():
-                        start_button = gr.Button("Start improve", variant="primary")
+                        model = gr.Dropdown(choices=model_list, value=model_list[0], info="select a model",
+                                            label="Model", scale=1)
                         with gr.Column():
                             face_enhance_2 = gr.Radio(
                                 choices=["GFPGAN", "CodeFormer", "None"],
@@ -63,15 +63,13 @@ if __name__ == '__main__':
                                 label="remove background",
                             )
 
-                        num_worker = gr.Slider(1, 10, value=1, step=1, label="Thread", visible=False, info="Choose between 1 and 10", )
+                        start_button = gr.Button("Start improve", variant="primary",scale=1)
 
-                        model = gr.Dropdown(choices=model_list, value=model_list[0], info="select a model",
-                                            label="Model")
                     info_text = gr.Textbox(label="info output", lines=3)
 
                     ret_img = gr.Image(label="upscale result")
                     hide_textbox = gr.Textbox(value="image", visible=False)
                     start_button.click(image_pipeline, [up_img, model, face_enhance_2, background_remove], outputs=[info_text, ret_img])
 
-    demo.queue(max_size=2)
+    demo.queue(max_size=10)
     demo.launch(debug=False, show_api=True, share=False, server_name="0.0.0.0")
