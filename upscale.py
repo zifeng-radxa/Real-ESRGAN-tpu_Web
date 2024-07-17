@@ -144,7 +144,7 @@ class Upscale():
                 print("TASK: {}".format(index))
 
                 if self.face_enhance:
-                    from face_enhance import FaceEnhance
+                    from plugin.face_enhance import FaceEnhance
                     tqdm_tool = tqdm(total=task_frame)
                     start = time.time()
                     for i in range(task_frame):
@@ -275,7 +275,7 @@ class Upscale():
                 self.frames[0].append({"id": 1, "data": img})
                 tqdm_tool = tqdm(total=4)
 
-                from face_enhance import FaceEnhance
+                from plugin.face_enhance import FaceEnhance
                 face_enhancer = FaceEnhance(self.worker[0], self.face_models[0], self.pars_models[0], self.enhance_models[0])
                 face_enhancer.run(self.frames[0][0], self.inference_frames, tqdm_tool)
                 if pad_black:

@@ -1,15 +1,13 @@
 import urllib.request
 import os
 import uuid
+import cv2
 
 def download_file(url, file_name, folder_path='model'):
-    # Create the folder if it doesn't exist
-    os.makedirs(folder_path, exist_ok=True)
-
-    # Combine folder path and file name to get the full file path
+    if not os.path.exists(folder_path):
+        os.makedirs(folder_path, exist_ok=True)
     file_path = os.path.join(folder_path, file_name)
     if not os.path.exists(file_path):
-    # Download the file from the URL and save it to the specified folder
         urllib.request.urlretrieve(url, file_path)
         print(f"File downloaded and saved to: {file_path}")
 
@@ -48,3 +46,27 @@ def resize_video(input_path):
     del os.environ["LD_LIBRARY_PATH"]
 
     return output_path
+
+
+def ratio_resize(img):
+    target_size = (480, 640)
+    old_size = img.shape[0:2]
+    ratio = min(float(target_size[i]) / (old_size[i]) for i in range(len(old_size)))
+    new_size = tuple([int(i * ratio) for i in old_size])
+    img = cv2.resize(img, new_size[::-1])
+    pad_w = target_size[1] - new_size[1]
+    pad_h = target_size[0] - new_size[0]
+    top, bottom = pad_h // 2, pad_h - (pad_h // 2)
+    left, right = pad_w // 2, pad_w - (pad_w // 2)
+    img_new = cv2.copyMakeBorder(img, top, bottom, left, right, cv2.BORDER_CONSTANT, None, (0, 0, 0))
+    pad_black = (top, bottom, left, right)
+    return img_new, pad_black
+
+def get_model_list():
+    files = os.listdir('./model')
+    model_list = []
+    for i in files:
+        if i[:4].lower() == "real":
+            model_list.append(i)
+
+    return model_list

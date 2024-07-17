@@ -6,12 +6,14 @@ DEVICE_ID = 0
 
 
 
-def load_model(model_name):
+def load_bmodel(model_name):
     model = EngineOV(model_path=os.path.join(MODEL_PATH, model_name), batch=1, device_id=DEVICE_ID)
     return model
 
 class EngineOV:
     def __init__(self, model_path="", batch=1 ,device_id=0) :
+        self.model_path = model_path
+        self.device_id = device_id
         if "DEVICE_ID" in os.environ:
             device_id = int(os.environ["DEVICE_ID"])
             print(">>>> device_id is in os.environ. and device_id = " ,device_id)
