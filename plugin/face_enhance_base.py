@@ -39,7 +39,7 @@ class FaceEnhanceBase():
 
     def forward(self, img, w):
         pass
-    
+
     def enhance(self, img, has_aligned=False, only_center_face=False, paste_back=True, w=0.5, tqdm_tool=None, bg_upscale_img=None):
         self.face_helper.clean_all()
         self.face_helper.read_image(img)
