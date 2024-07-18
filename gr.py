@@ -47,29 +47,37 @@ if __name__ == '__main__':
         with gr.Tab("Image"):
             with gr.Row():
                 with gr.Column():
-                    up_img = gr.Image(label="upload a image to upscale resolution", type="numpy")
+                    up_img = gr.Image(label="upload a image to upscale resolution", type="numpy", scale=1)
+                    model = gr.Dropdown(choices=model_list, value=model_list[0], info="select a model",
+                                        label="Model", scale=1)
+
                     with gr.Row():
-                        model = gr.Dropdown(choices=model_list, value=model_list[0], info="select a model",
-                                            label="Model", scale=1)
-                        with gr.Column():
-                            face_enhance_2 = gr.Radio(
-                                choices=["GFPGAN", "CodeFormer", "None"],
-                                value="None",
-                                type="value",
-                                label="Face Enhance Tools",
-                            )
+                        face_enhance_2 = gr.Radio(
+                            choices=["GFPGAN", "CodeFormer", "None"],
+                            value="None",
+                            type="value",
+                            label="Face Enhance Tools",
+                        )
 
-                            background_remove = gr.Checkbox(
-                                label="remove background",
-                            )
+                        background_remove = gr.Radio(
+                            choices=["upscale + remove background",
+                                     "only remove background",
+                                     "None"],
+                            value="None",
+                            type="index",
+                            label="Background Remove tool"
+                        )
 
+                    with gr.Row():
+                        clear_button = gr.ClearButton(value="Clear")
                         start_button = gr.Button("Start improve", variant="primary",scale=1)
 
+                with gr.Column():
+                    ret_img = gr.Image(label="upscale result", format="png", scale=1)
                     info_text = gr.Textbox(label="info output", lines=3)
 
-                    ret_img = gr.Image(label="upscale result")
-                    hide_textbox = gr.Textbox(value="image", visible=False)
-                    start_button.click(image_pipeline, [up_img, model, face_enhance_2, background_remove], outputs=[info_text, ret_img])
+            clear_button.add(components=[up_img, info_text, ret_img])
+            start_button.click(image_pipeline, [up_img, model, face_enhance_2, background_remove], outputs=[info_text, ret_img])
 
     demo.queue(max_size=10)
     demo.launch(debug=False, show_api=True, share=False, server_name="0.0.0.0")

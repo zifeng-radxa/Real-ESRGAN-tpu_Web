@@ -48,8 +48,8 @@ def resize_video(input_path):
     return output_path
 
 
-def ratio_resize(img):
-    target_size = (480, 640)
+def ratio_resize(img, target_size):
+    # target_size = (480, 640)
     old_size = img.shape[0:2]
     ratio = min(float(target_size[i]) / (old_size[i]) for i in range(len(old_size)))
     new_size = tuple([int(i * ratio) for i in old_size])

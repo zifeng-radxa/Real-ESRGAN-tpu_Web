@@ -2,8 +2,7 @@ from FACEXLIB.facexlib.utils.face_restoration_helper import FaceRestoreHelper
 import cv2
 import numpy as np
 import time
-
-class FaceEnhanceBase():
+class FaceEnhancerBase():
     def __init__(self, face_bmodel=None, pars_bmodel=None, bg_upsampler=None):
         self.net = None
         self.bg_upsampler = bg_upsampler
@@ -62,7 +61,8 @@ class FaceEnhanceBase():
             self.face_helper.get_inverse_affine(None)
             # paste each restored face to the input image
             restored_img = self.face_helper.paste_faces_to_input_image(upsample_img=bg_upscale_img)
-            tqdm_tool.update(1)
+            if tqdm_tool is not None:
+                tqdm_tool.update(1)
             return self.face_helper.cropped_faces, self.face_helper.restored_faces, restored_img
         else:
             return self.face_helper.cropped_faces, self.face_helper.restored_faces, None

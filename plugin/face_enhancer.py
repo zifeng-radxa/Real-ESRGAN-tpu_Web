@@ -1,7 +1,7 @@
 import numpy as np
-from plugin.face_enhance_base import FaceEnhanceBase
+from plugin.face_enhancer_base import FaceEnhancerBase
 
-class CodeFormer(FaceEnhanceBase):
+class CodeFormer(FaceEnhancerBase):
     def __init__(self, code_bmodel, face_bmodel=None, pars_bmodel=None, bg_upsampler=None):
         super().__init__(face_bmodel, pars_bmodel, bg_upsampler)
         self.net = code_bmodel
@@ -19,7 +19,7 @@ class CodeFormer(FaceEnhanceBase):
         return output
 
 
-class GFPGANer(FaceEnhanceBase):
+class GFPGANer(FaceEnhancerBase):
     def __init__(self, gfpgan_bmodel, face_bmodel=None, pars_bmodel=None, bg_upsampler=None):
         super().__init__(face_bmodel, pars_bmodel, bg_upsampler)
         self.net = gfpgan_bmodel

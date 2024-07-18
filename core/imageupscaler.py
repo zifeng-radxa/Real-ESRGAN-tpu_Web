@@ -1,7 +1,6 @@
 import time
 import os
 from tqdm import tqdm
-import gradio as gr
 import numpy as np
 from threading import Thread
 # from tools.writer import Writer
@@ -49,30 +48,23 @@ class ImageUpscaler():
         # 将图像从 chw 转换回 hwc, rgb->brg
         # res = cv2.cvtColor(res, cv2.COLOR_RGB2BGR)
         res = np.clip(res, 0, 255).astype(np.uint8)
-        tqdm_tool.update(1)
+        # tqdm_tool.update(1)
 
         return res
 
-    # def
-
-    def __call__(self, input_path, output_path=None, face_enhance=None):
-        if isinstance(input_path, str):
-            img = cv2.imread(input_path)
-            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        elif isinstance(input_path, np.ndarray):
-            img = input_path
-            cv2.imwrite("sss.jpg", img)
-
-        h, w = img.shape[0:2]
+    def __call__(self, input, face_enhance=None):
+        h, w = input.shape[0:2]
         pad_black = None
         if h != 480 or w != 640:
-            img, pad_black = ratio_resize(img)
+            img, pad_black = ratio_resize(input, target_size=(480, 640))
+        else:
+            img = input
 
         if face_enhance != "None":
-            tqdm_tool = tqdm(total=5)
+            tqdm_tool = tqdm(total=4)
+            img = img.astype(np.float32)
             img_copy = img.copy()
             img_copy = cv2.cvtColor(img_copy, cv2.COLOR_RGB2BGR)
-            img = img.astype(np.float32)
             # 将图像从 hwc 转换为 chw
             frame_chw = np.transpose(img, (2, 0, 1))
             # 归一化
@@ -85,7 +77,7 @@ class ImageUpscaler():
             res_frame = face_enhancer.run(img_copy, tqdm_tool, res_frame)
 
         else:
-            tqdm_tool = tqdm(total=2)
+            tqdm_tool = tqdm(total=1)
             img = img.astype(np.float32)
             # 将图像从 hwc 转换为 chw
             frame_chw = np.transpose(img, (2, 0, 1))
@@ -95,11 +87,7 @@ class ImageUpscaler():
             tqdm_tool.update(1)
 
 
-        if pad_black:
+        if pad_black is not None:
             res_frame = res_frame[pad_black[0]*4:1920-pad_black[1]*4, pad_black[2]*4:2560-pad_black[3]*4, :]
-            tqdm_tool.update(1)
-        if output_path is not None:
-            save_frame = cv2.cvtColor(res_frame, cv2.COLOR_RGB2BGR)
-            cv2.imwrite(output_path, save_frame)
 
         return res_frame
