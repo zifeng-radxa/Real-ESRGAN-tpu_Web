@@ -2,6 +2,7 @@ import urllib.request
 import os
 import uuid
 import cv2
+import time
 
 def download_file(url, file_name, folder_path='model'):
     if not os.path.exists(folder_path):
@@ -53,7 +54,7 @@ def ratio_resize(img, target_size):
     old_size = img.shape[0:2]
     ratio = min(float(target_size[i]) / (old_size[i]) for i in range(len(old_size)))
     new_size = tuple([int(i * ratio) for i in old_size])
-    img = cv2.resize(img, new_size[::-1])
+    img = cv2.resize(img, new_size[::-1], interpolation=cv2.INTER_LINEAR)
     pad_w = target_size[1] - new_size[1]
     pad_h = target_size[0] - new_size[0]
     top, bottom = pad_h // 2, pad_h - (pad_h // 2)
@@ -70,3 +71,12 @@ def get_model_list():
             model_list.append(i)
 
     return model_list
+
+def timer(func):
+    def wrapper(*args, **kwargs):
+        time0 = time.time()
+        result = func(*args, **kwargs)
+        elapsed = (time.time() - time0) * 1000
+        print(f"Function '{func.__name__}' executed in: {elapsed:.2f} ms")
+        return result
+    return wrapper

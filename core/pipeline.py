@@ -1,9 +1,8 @@
 from core.imageupscaler import ImageUpscaler
 import os
 import uuid
-from tools.utils import get_model_list
-import argparse
-import gradio as gr
+from tools.utils import get_model_list, timer
+
 import cv2
 import numpy as np
 from plugin.bgremove import Bgremover
@@ -32,7 +31,7 @@ bger = Bgremover()
 #     return ("Success upscale, click download icon to download to local", result_path)
 
 
-
+@timer
 def image_pipeline(input, model, face_enhance=None, background_remove=None, output_path=None, save=False):
     if input is None:
         return ("Please upload image", None)
@@ -44,23 +43,26 @@ def image_pipeline(input, model, face_enhance=None, background_remove=None, outp
         img = input
 
     if background_remove == 0:
-        # upscale + bgremove
-        image_upscaler.change_model(model, face_enhance)
-        res = image_upscaler(img, face_enhance)
-        cv2.imwrite("ss.png", res)
-
+        image_upscaler.change_model(model, face_enhance_name="None", bg_helper=True)
+        bg_hlepr_img = image_upscaler(img, face_enhance="None", bg_upscale=True)
         bger.init_model()
-        res = bger.forward(res)
+        _, mask = bger.forward(bg_hlepr_img)
+        image_upscaler.change_model(model, face_enhance_name=face_enhance, bg_helper=False)
+        res = image_upscaler(img, face_enhance)
+        new_mask = cv2.resize(mask, (res.shape[1], res.shape[0]), interpolation=cv2.INTER_LINEAR)
+        res = cv2.cvtColor(res, cv2.COLOR_RGB2BGRA)
+        res = res[:,:,[2,1,0,3]]
+        res[:,:,3] = new_mask
 
     elif background_remove == 1:
         # only bgremove
         bger.init_model()
-        res = bger.forward(img)
+        res, _ = bger.forward(img)
 
     elif background_remove == 2:
         # only upscale
-        image_upscaler.change_model(model, face_enhance)
-        res = image_upscaler(img, face_enhance)
+        image_upscaler.change_model(model, face_enhance, bg_helper=False)
+        res = image_upscaler(img, face_enhance, bg_upscale=False)
 
     if save:
         if output_path is None:
