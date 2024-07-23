@@ -8,10 +8,10 @@ from tools.tpu_utils import load_bmodel
 from tools.utils import ratio_resize
 import cv2
 
-try:
-    del os.environ["LD_LIBRARY_PATH"]
-except Exception as e:
-    pass
+# try:
+#     del os.environ["LD_LIBRARY_PATH"]
+# except Exception as e:
+#     pass
 
 
 class ImageUpscaler():

@@ -6,7 +6,7 @@ DEVICE_ID = 0
 
 
 
-def load_bmodel(model_name):
+def load_bmodel(model_name, batch=1):
     model = EngineOV(model_path=os.path.join(MODEL_PATH, model_name), batch=1, device_id=DEVICE_ID)
     return model
 
@@ -18,7 +18,6 @@ class EngineOV:
             device_id = int(os.environ["DEVICE_ID"])
             print(">>>> device_id is in os.environ. and device_id = " ,device_id)
         self.model = SGInfer(model_path , batch=batch, devices=[device_id])
-
     def __str__(self):
         return "EngineOV: model_path={}, device_id={}".format(self.model_path ,self.device_id)
 

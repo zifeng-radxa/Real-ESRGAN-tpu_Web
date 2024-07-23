@@ -2,10 +2,13 @@ from core.imageupscaler import ImageUpscaler
 import os
 import uuid
 from tools.utils import get_model_list, timer
+# from threading import Thread
 
 import cv2
 import numpy as np
-from plugin.bgremove import Bgremover
+from plugin.bgremove import Bgremover, Bgremover2
+
+
 model_list = get_model_list()
 image_upscaler = ImageUpscaler()
 bger = Bgremover()
@@ -41,11 +44,10 @@ def image_pipeline(input, model, face_enhance=None, background_remove=None, outp
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     elif isinstance(input, np.ndarray):
         img = input
-
     if background_remove == 0:
         image_upscaler.change_model(model, face_enhance_name="None", bg_helper=True)
         bg_hlepr_img = image_upscaler(img, face_enhance="None", bg_upscale=True)
-        bger.init_model()
+        bger.change_model()
         _, mask = bger.forward(bg_hlepr_img)
         image_upscaler.change_model(model, face_enhance_name=face_enhance, bg_helper=False)
         res = image_upscaler(img, face_enhance)
@@ -56,7 +58,7 @@ def image_pipeline(input, model, face_enhance=None, background_remove=None, outp
 
     elif background_remove == 1:
         # only bgremove
-        bger.init_model()
+        bger.change_model()
         res, _ = bger.forward(img)
 
     elif background_remove == 2:
@@ -87,5 +89,47 @@ def image_pipeline(input, model, face_enhance=None, background_remove=None, outp
 #
 #     up = VideoUpscale()
 
+def video_pipeline(input, model, face_enhance=None, background_remove=None, output_path=None, save=False):
+    if not isinstance(input, str):
+        print("do not support this format")
 
+    if input.endswith('.flv'):
+        mp4_path = input.replace('.flv', '.mp4')
+        os.system(f'ffmpeg_ubuntu -i {input} -codec copy {mp4_path}')
+        video_input = mp4_path
+    if not os.path.exists('./temp_frames'):
+        os.makedirs('./temp_frames', exist_ok=True)
+    if not os.path.exists('./temp_res_frames'):
+        os.makedirs('./temp_res_frames', exist_ok=True)
+
+    os.system(f'ffmpeg_ubuntu -i {input} -qscale:v 1 -qmin 1 -qmax 1 -vsync 0  ./temp_frames/frame%d.png')
+
+    if background_remove == 0:
+        num_thread = 1
+        batch_size = 30 # fix
+
+
+        pass
+    elif background_remove == 1:
+        num_thread = 2
+        batch_size = 30
+
+        bger = Bgremover2(thread_num=1)
+        bger.init_model()
+        bger.forward('./temp_frames')
+
+        # pre_process_input
+        # split video
+        #
+        # mutil model or mutil thread to remove background
+
+        pass
+    elif background_remove == 2:
+        pass
+
+    if save:
+        if output_path is None:
+            if not os.path.exists(os.path.join('./result', 'video')):
+                os.makedirs(os.path.join('./result', 'video'), exist_ok=True)
+            output_path = './result/video/out_{}.mp4'.format(uuid.uuid4())
 
