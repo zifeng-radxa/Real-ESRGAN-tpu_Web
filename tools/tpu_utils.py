@@ -6,8 +6,8 @@ DEVICE_ID = 0
 
 
 
-def load_bmodel(model_name, batch=1):
-    model = EngineOV(model_path=os.path.join(MODEL_PATH, model_name), batch=1, device_id=DEVICE_ID)
+def load_bmodel(model_name, batch=1, model_type="image"):
+    model = EngineOV(model_path=os.path.join(MODEL_PATH, model_type,model_name), batch=1, device_id=DEVICE_ID)
     return model
 
 class EngineOV:
@@ -34,3 +34,7 @@ class EngineOV:
         task_id, results, valid = self.model.get()
         # print(str(round((time.time() - start) * 1000, 3)) + " ms")
         return results
+
+def clean_tpu_memory(model_host_list):
+    for i in model_host_list:
+        i.clean_tpu_memory()

@@ -3,6 +3,7 @@ import os
 import uuid
 import cv2
 import time
+import socket
 
 def download_file(url, file_name, folder_path='model'):
     if not os.path.exists(folder_path):
@@ -63,8 +64,8 @@ def ratio_resize(img, target_size):
     pad_black = (top, bottom, left, right)
     return img_new, pad_black
 
-def get_model_list():
-    files = os.listdir('./model')
+def get_model_list(mode_type="image"):
+    files = os.listdir('./model/{}'.format(mode_type))
     model_list = []
     for i in files:
         if i[:4].lower() == "real":
@@ -80,3 +81,12 @@ def timer(func):
         print(f"Function '{func.__name__}' executed in: {elapsed:.2f} ms")
         return result
     return wrapper
+
+def get_host_ip():
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(('8.8.8.8', 80))
+        ip = s.getsockname()[0]
+    finally:
+        s.close()
+    return ip

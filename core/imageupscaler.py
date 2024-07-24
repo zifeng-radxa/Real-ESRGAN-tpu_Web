@@ -45,6 +45,16 @@ class ImageUpscaler():
 
         if self.bg_helper_model is None and bg_helper:
             self.bg_helper_model = load_bmodel("realesr-animevideo_v3_rgb_1_3_480_640.bmodel")
+
+    def clean_tpu_memory(self):
+        self.cur_model_name = None
+        self.cur_face_enhance_name = None
+        self.re_upscale_model = None
+        self.face_enhance_model = None
+        self.face_detect_model = None
+        self.face_pars_model = None
+        self.bg_helper_model = None
+
     def model_inference(self, frame, bg_helper=False):
         if bg_helper:
             res = self.bg_helper_model([np.expand_dims(frame, axis=0)])[0][0]

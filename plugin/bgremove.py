@@ -1,21 +1,26 @@
 import os
 
 from tools.tpu_utils import load_bmodel
-from tools.utils import ratio_resize
+from tools.utils import timer
 import numpy as np
 import cv2
 from threading import Thread
+from tqdm import tqdm
+import time
 
 class Bgremover():
     def __init__(self):
         self.net = None
         self.cur_mode = None
 
-    def change_model(self, model_name="rmbg_f16_1.bmodel"):
+    def init_model(self, model_name="rmbg_f16_1.bmodel"):
         if model_name != self.cur_mode:
             self.net = load_bmodel(model_name)
             self.cur_name = model_name
 
+    def clean_tpu_memory(self):
+        self.net = None
+        self.cur_mode = None
 
     def preprocess(self, img):
         img = img.astype('float32')
@@ -57,17 +62,30 @@ class Bgremover():
         img_a = cv2.resize(img_a, img_orl_shape[::-1])
         return img_a, img_a[:,:,3]
 
+
 class Bgremover2(Bgremover):
-    def __init__(self, thread_num):
+    def __init__(self, thread_num=1):
         super().__init__()
         self.nets = []
         self.thread_num = thread_num
         self.video_shape = None
 
-    def init_model(self):
-        for i in range(self.thread_num):
-            net = load_bmodel('rmbg_f16_30.bmodel')
-            self.nets.append(net)
+    def init_model(self, thread_num=1):
+        self.thread_num = thread_num
+        cur_net = len(self.nets)
+        diff = self.thread_num - cur_net
+        if diff > 0:
+            for i in range(diff):
+                net = load_bmodel('rmbg_f16_30.bmodel', model_type="video")
+                self.nets.append(net)
+        else:
+            for i in range(-diff):
+                self.nets.pop()
+
+    def clean_tpu_memory(self):
+        self.nets = []
+        self.thread_num = 1
+        self.video_shape = None
 
     def clear_model(self):
         self.nets.clear()
@@ -92,6 +110,7 @@ class Bgremover2(Bgremover):
         imgs_infer_data = []
         imgs_name = []
         masks_data = []
+        time0 = time.time()
         for i in input_file_name:
             img_data = cv2.imread(os.path.join('./temp_frames', i))
             imgs_orl_data.append(img_data)
@@ -101,6 +120,7 @@ class Bgremover2(Bgremover):
 
         input_numpy = np.concatenate(imgs_infer_data, axis=0)
         imgs_infer_data.clear()
+        print((time.time() - time0) * 1000)
         res_numpy = worker([input_numpy])[0]
 
         for i in range(len(res_numpy)):
@@ -130,7 +150,6 @@ class Bgremover2(Bgremover):
         self.video_shape = img.shape[:2]
 
 
-
     def forward(self, input):
         if isinstance(input, str):
             imgs_file = os.listdir(input)
@@ -140,18 +159,22 @@ class Bgremover2(Bgremover):
             task_num = total_img_num // SPLIT if total_img_num % SPLIT == 0 else total_img_num // SPLIT + 1
             frame_split = [SPLIT for _ in range(task_num - 1)]
             frame_split.append(SPLIT if total_img_num % SPLIT == 0 else total_img_num % SPLIT)
+            print(frame_split)
+            tqdm_tool = tqdm(total=task_num)
             for i in range(0, task_num, self.thread_num):
                 sub_img_file = imgs_file[i*SPLIT:(i*SPLIT + SPLIT*self.thread_num)]
                 thread = []
                 for j in range(self.thread_num):
-                    t = Thread(target=self.thread_prograss, args=(sub_img_file[j*SPLIT: j*SPLIT + SPLIT], self.nets[j]))
-                    thread.append(t)
+                    if i + j < task_num:
+                        t = Thread(target=self.thread_prograss, args=(sub_img_file[j*SPLIT: j*SPLIT + SPLIT], self.nets[j]))
+                        thread.append(t)
 
                 for t in thread:
                     t.start()
 
                 for t in thread:
                     t.join()
+                    tqdm_tool.update(1)
 
                 del thread
 
