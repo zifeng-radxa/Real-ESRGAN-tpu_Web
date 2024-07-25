@@ -105,7 +105,7 @@ class Bgremover2(Bgremover):
         output = output.astype(np.uint8)
         return output
 
-    def thread_prograss(self, input_file_name, worker):
+    def thread_progress(self, input_file_name, worker):
         imgs_orl_data = []
         imgs_infer_data = []
         imgs_name = []
@@ -166,7 +166,7 @@ class Bgremover2(Bgremover):
                 thread = []
                 for j in range(self.thread_num):
                     if i + j < task_num:
-                        t = Thread(target=self.thread_prograss, args=(sub_img_file[j*SPLIT: j*SPLIT + SPLIT], self.nets[j]))
+                        t = Thread(target=self.thread_progress, args=(sub_img_file[j * SPLIT: j * SPLIT + SPLIT], self.nets[j]))
                         thread.append(t)
 
                 for t in thread:

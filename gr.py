@@ -44,7 +44,7 @@ if __name__ == '__main__':
                             label="audio",
                             info="if click would output with audio"
                         )
-                        num_worker = gr.Slider(1, 2, value=1, step=1, label="Thread", info="Choose between 1 and 2", )
+                        num_worker = gr.Slider(1, 2, value=1, step=1, label="Thread", info="Choose between 1 and 3", )
 
                     with gr.Row():
                         clear_button_v = gr.ClearButton(value="Clear", components=[up_video])
