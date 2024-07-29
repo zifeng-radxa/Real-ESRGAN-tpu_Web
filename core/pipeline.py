@@ -15,31 +15,12 @@ image_upscaler2 = ImageUpscaler2()
 bger = Bgremover()
 bger2 = Bgremover2()
 
-# def run(input_path, model, type, num_worker=1, audio_check=None, face_enhance=None):
-#     if not os.path.exists(os.path.join('./result', type)):
-#         os.makedirs(os.path.join('./result', type), exist_ok=True)
-#     if type == "video":
-#         output_path = './result/video/out_{}.mp4'.format(uuid.uuid4())
-#         tmp_path = './result/video/temph264_{}.mp4'.format(uuid.uuid4())
-#     else:
-#         output_path = './result/image/out_{}.jpg'.format(uuid.uuid4())
-#         tmp_path = None
-#     # try:
-#     up = Upscale(input_path, output_path, model, tmp_path, type, num_worker=num_worker, face_enhance=face_enhance)
-#     result_path = up(audio_check)
-#     # except Exception as e:
-#     #     print(e)
-#     #     gr.Error("Error, please check the info box")
-#     #     return (e, None)
-#
-#     return ("Success upscale, click download icon to download to local", result_path)
-
-
+v_model_loaded = []
 
 
 @timer
 def image_pipeline(input, model, face_enhance=None, background_remove=None, output_path=None, save=False, thread=None):
-    clean_tpu_memory([bger2])
+    clean_tpu_memory([image_upscaler2, bger2])
     if input is None:
         return ("Please upload image", None)
 
@@ -86,7 +67,7 @@ def image_pipeline(input, model, face_enhance=None, background_remove=None, outp
 
 @timer
 def video_pipeline(input, model, face_enhance=None, background_remove=None, thread=1, audio=None, output_path=None, save=True):
-    clean_tpu_memory([image_upscaler, bger])
+    clean_tpu_memory([image_upscaler, bger, image_upscaler2, bger2])
     if not isinstance(input, str) or input is None:
         print("Please upload your video")
         return "Please upload your video", None
@@ -109,18 +90,36 @@ def video_pipeline(input, model, face_enhance=None, background_remove=None, thre
     print("**************")
 
     if background_remove == 0:
-        pass
+        # upscale + rmgb + upscale
+        print("up scaling video step 1")
+        image_upscaler2.change_model("realesr-animevideov3_f16.bmodel", face_enhance, thread_num=thread)
+        image_upscaler2.forward('./temp_frames')
+        print("removing background")
+        bger2.init_model(thread_num=thread)
+        bger2.forward('./temp_res_frames', save_type="mask")
+        image_upscaler2.change_model(model, face_enhance, thread_num=thread)
+        if model == "realesr-animevideov3_f16.bmodel":
+            print("merge background")
+            bger2.forward('./temp_frames', call_back="run_io_bgrm_progress")
+        else:
+            print("up scaling video step 2")
+            image_upscaler2.forward('./temp_frames')
+            print("merge background")
+            bger2.forward('./temp_frames', call_back="run_io_bgrm_progress")
+
 
     elif background_remove == 1:
+        # only remove bg
+        print("removing background")
         bger2.init_model(thread_num= thread)
-        bger2.forward('./temp_frames')
+        bger2.forward('./temp_frames', save_type="image")
 
-        pass
 
     elif background_remove == 2:
         # only upscale
+        print("up scaling video")
         image_upscaler2.change_model(model, face_enhance, thread_num=thread)
-        image_upscaler2.forward('./temp_frames')
+        image_upscaler2.forward('./temp_frames', face_enhance)
 
 
     if save:
@@ -132,7 +131,7 @@ def video_pipeline(input, model, face_enhance=None, background_remove=None, thre
         os.system(f'ffmpeg_ubuntu -framerate {fps} -i ./temp_res_frames/frame%d.png -c:v libx264 -pix_fmt yuv420p -y {output_path}')
         if audio:
             output_path = fuse_audio_with_ffmpeg(input,output_path)
-    clean_cache_file()
+    # clean_cache_file()
     # os.remove(input)
     return "Video Process Success, you can find the output in {} or click the download icon".format(output_path), output_path
 

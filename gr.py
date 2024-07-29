@@ -11,6 +11,12 @@ run Real-ESRGAN to upscale video/image resolution by TPU
 **realesr-animevideo_v3** optimized for anime videos\n
 **realesr-general-x4v3** a tiny small model for general scenes\n
 """
+def change_thread_num(background_remove_v):
+    print(background_remove_v)
+    if background_remove_v == 0:
+        return gr.Slider(1, 1, value=1, step=1, label="Thread", info='upscale + remove background only accept 1 thread' )
+    else:
+        return gr.Slider(1, 2, value=1, step=1, label="Thread", info="Choose between 1 and 2", )
 
 if __name__ == '__main__':
     with gr.Blocks(analytics_enabled=False) as demo:
@@ -42,7 +48,8 @@ if __name__ == '__main__':
                     with gr.Row():
                         audio = gr.Checkbox(
                             label="audio",
-                            info="if click would output with audio"
+                            info="if click would output with audio",
+                            value=True
                         )
                         num_worker = gr.Slider(1, 2, value=1, step=1, label="Thread", info="Choose between 1 and 3", )
 
@@ -54,6 +61,7 @@ if __name__ == '__main__':
                     ret_video = gr.Video(label="output video", format=None, autoplay=False)
                     info_text = gr.Textbox(label="info output", lines=3)
 
+        background_remove_v.change(change_thread_num, background_remove_v, num_worker)
         clear_button_v.add(components=[info_text, ret_video])
         start_button_v.click(video_pipeline, [up_video, model, face_enhance_v, background_remove_v, num_worker, audio],
                            outputs=[info_text, ret_video])

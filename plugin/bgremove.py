@@ -7,6 +7,7 @@ import cv2
 from threading import Thread
 from tqdm import tqdm
 import time
+import asyncio
 
 class Bgremover():
     def __init__(self):
@@ -83,14 +84,14 @@ class Bgremover2(Bgremover):
                 self.nets.pop()
 
     def clean_tpu_memory(self):
-        self.nets = []
+        self.nets.clear()
         self.thread_num = 1
         self.video_shape = None
 
     def clear_model(self):
         self.nets.clear()
 
-    def postprocess(self, output, img_orl_size):
+    def postprocess(self, output, img_orl_size, keep_shape=True):
         ma = np.max(output)
         mi = np.min(output)
         output = (output - mi) / (ma - mi)
@@ -105,52 +106,85 @@ class Bgremover2(Bgremover):
         output = output.astype(np.uint8)
         return output
 
-    def thread_progress(self, input_file_name, worker):
-        imgs_orl_data = []
-        imgs_infer_data = []
-        imgs_name = []
+    async def async_imwrite(self, path, img):
+        loop = asyncio.get_running_loop()
+        await loop.run_in_executor(None, cv2.imwrite, path, img)
+
+    async def thread_progress(self, input_file_name, worker, source_path='./temp_frames', target_path='./temp_res_frames', save_type="image", keep_shape=True):
         masks_data = []
-        time0 = time.time()
-        for i in input_file_name:
-            img_data = cv2.imread(os.path.join('./temp_frames', i))
-            imgs_orl_data.append(img_data)
-            img_data, _ = self.preprocess(img_data)
-            imgs_infer_data.append(img_data)
-            imgs_name.append(i)
+        imgs_data = [cv2.imread(os.path.join(source_path, i)) for i in input_file_name]
+        imgs_infer_data = [self.preprocess(i)[0] for i in imgs_data]
 
         input_numpy = np.concatenate(imgs_infer_data, axis=0)
         imgs_infer_data.clear()
-        print((time.time() - time0) * 1000)
         res_numpy = worker([input_numpy])[0]
 
+        # async_mask_task = []
         for i in range(len(res_numpy)):
-            # name = 0
-            mask = self.postprocess(res_numpy[i], self.video_shape)
-            masks_data.append(mask)
-            cv2.imwrite("./temp_mask/{}".format(imgs_name[i]), mask)
+            if save_type == "mask":
+                mask = self.postprocess(res_numpy[i], (1440, 2560))
+                await self.async_imwrite(os.path.join('./temp_mask', input_file_name[i]), mask)
+            else:
+                mask = self.postprocess(res_numpy[i], self.video_shape)
+                masks_data.append(mask)
+        del res_numpy
 
-        for i in range(len(imgs_orl_data)):
-            img_orl = imgs_orl_data.pop()
-            img_name = imgs_name.pop()
-            mask = masks_data.pop()
-            img_orl = img_orl.astype(np.float32)
-            green_img = np.zeros_like(img_orl)
+        if save_type == "image":
+            async_task = []
+            for i in range(len(input_file_name)-1, -1, -1):
+                img_orl = imgs_data.pop()
+                mask = masks_data.pop()
+                img_orl = img_orl.astype(np.float32)
+                green_img = np.zeros_like(img_orl)
+                green_img[:, :] = [0, 255, 0]
+                green_area = cv2.bitwise_and(green_img, green_img, mask=cv2.bitwise_not(mask))
+                res = cv2.bitwise_and(img_orl, img_orl, mask=mask)
+                res = cv2.add(green_area, res)
+                # await self.async_imwrite(os.path.join(target_path, input_file_name[i]), res)
+                task = self.async_imwrite(os.path.join(target_path, input_file_name[i]), res)
+                async_task.append(task)
+            # cv2.imwrite(os.path.join('./temp_res_frames', img_name), res)
+
+            await asyncio.gather(*async_task)
+
+    def run_thread_progress(self, input_file_name, worker, source_path, save_type):
+        time0 = time.time()
+        asyncio.run(self.thread_progress(input_file_name, worker, source_path, save_type=save_type))
+        print((time.time() - time0) * 1000)
+
+    async def io_bgrm_thread(self, input_file_name):
+        mask_data = [cv2.imread(os.path.join('temp_mask', i), cv2.IMREAD_GRAYSCALE) for i in input_file_name]
+        up_img_data = [cv2.imread(os.path.join('temp_res_frames', i)) for i in input_file_name]
+        async_task = []
+        for i in range(len(mask_data)-1 , -1, -1):
+            mask = mask_data.pop()
+            img = up_img_data.pop()
+            mask = mask.astype(np.uint8)
+            # mask = cv2.cvtColor(mask, cv2.COLOR_BGR2GRAY)
+            img = img.astype(np.float32)
+            green_img = np.zeros_like(img)
             green_img[:, :] = [0, 255, 0]
             green_area = cv2.bitwise_and(green_img, green_img, mask=cv2.bitwise_not(mask))
-            res = cv2.bitwise_and(img_orl, img_orl, mask=mask)
+            cv2.imwrite(os.path.join('temp_test', input_file_name[i]), green_area)
+            res = cv2.bitwise_and(img, img, mask=mask)
             res = cv2.add(green_area, res)
+            task = self.async_imwrite(os.path.join('temp_res_frames', input_file_name[i]), res)
+            async_task.append(task)
 
-            cv2.imwrite(os.path.join('./temp_res_frames', img_name), res)
+        await asyncio.gather(*async_task)
 
-
-
+    def run_io_bgrm_progress(self, input_file_name):
+        print(input_file_name)
+        time0 = time.time()
+        asyncio.run(self.io_bgrm_thread(input_file_name))
+        print((time.time() - time0) * 1000)
 
     def get_video_meta(self, input):
         img = cv2.imread(os.path.join('./temp_frames', input))
         self.video_shape = img.shape[:2]
 
 
-    def forward(self, input):
+    def forward(self, input, save_type="image", call_back="run_thread_progress"):
         if isinstance(input, str):
             imgs_file = os.listdir(input)
             total_img_num = len(imgs_file)
@@ -166,8 +200,14 @@ class Bgremover2(Bgremover):
                 thread = []
                 for j in range(self.thread_num):
                     if i + j < task_num:
-                        t = Thread(target=self.thread_progress, args=(sub_img_file[j * SPLIT: j * SPLIT + SPLIT], self.nets[j]))
-                        thread.append(t)
+                        if call_back == "run_thread_progress":
+                            t = Thread(target=self.run_thread_progress, args=(sub_img_file[j * SPLIT: j * SPLIT + SPLIT], self.nets[j], input, save_type))
+                            thread.append(t)
+                        elif call_back == "run_io_bgrm_progress":
+                            print("aaaaaaaaaaaaaaaaaa")
+                            print(len(sub_img_file[j * SPLIT: j * SPLIT + SPLIT]))
+                            t = Thread(target=self.run_io_bgrm_progress, args=(sub_img_file[j * SPLIT: j * SPLIT + SPLIT],))
+                            thread.append(t)
 
                 for t in thread:
                     t.start()
@@ -177,6 +217,10 @@ class Bgremover2(Bgremover):
                     tqdm_tool.update(1)
 
                 del thread
+
+
+
+
 
 
 
