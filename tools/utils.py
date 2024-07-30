@@ -5,6 +5,19 @@ import cv2
 import time
 import socket
 
+# id_color_dict = {
+#     # BGR
+#     "White": [255, 255, 255],
+#     "Blue": [219, 142, 67],
+#     "Red": [0, 0, 255]
+# }
+
+id_color_dict = {
+    # BGR
+    "White": [255, 255, 255],
+    "Blue": [67, 142, 219],
+    "Red": [255, 0, 0]
+}
 def download_file(url, file_name, folder_path='model'):
     if not os.path.exists(folder_path):
         os.makedirs(folder_path, exist_ok=True)
@@ -95,3 +108,39 @@ def get_host_ip():
     finally:
         s.close()
     return ip
+
+
+def hex_to_rgb(hex_color):
+    """
+    Convert HEX color to RGB.
+
+    Args:
+    hex_color (str): The HEX color string (e.g., '#ffffff').
+
+    Returns:
+    list: A list of three integers representing the RGB color (e.g., [255, 255, 255]).
+    """
+    # Remove the '#' character if present
+    hex_color = hex_color.lstrip('#')
+
+    # Convert the hex string to integers for R, G, and B
+    rgb = [int(hex_color[i:i + 2], 16) for i in (0, 2, 4)]
+    return rgb
+
+def make_same_size(main_img, bg_img):
+    main_h, main_w = main_img.shape[:2]
+    bg_h, bg_w = bg_img.shape[:2]
+    scale_w = main_w / bg_w
+    scale_h = main_h / bg_h
+    scale = max(scale_w, scale_h)
+
+    new_w = int(bg_w * scale)
+    new_h = int(bg_h * scale)
+    resized_sub_image = cv2.resize(bg_img, (new_w, new_h), interpolation=cv2.INTER_AREA)
+
+    start_x = (new_w - main_w) // 2
+    start_y = (new_h - main_h) // 2
+    cropped_sub_image = resized_sub_image[start_y:start_y + main_h, start_x:start_x + main_w, :]
+    return cropped_sub_image
+
+

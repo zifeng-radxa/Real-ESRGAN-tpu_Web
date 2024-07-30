@@ -2,18 +2,11 @@ import time
 import os
 from tqdm import tqdm
 import numpy as np
-from threading import Thread
-# from tools.writer import Writer
 from tools.tpu_utils import load_bmodel
 from tools.utils import ratio_resize, timer
 import cv2
 from concurrent.futures import ThreadPoolExecutor
 import asyncio
-
-# try:
-#     del os.environ["LD_LIBRARY_PATH"]
-# except Exception as e:
-#     pass
 
 
 class ImageUpscaler():
@@ -139,14 +132,14 @@ class ImageUpscaler2(ImageUpscaler):
         # print("model_name: {}".format(model_name))
         if model_name != self.cur_model_name:
             self.nets.clear()
-            for i in range(thread_num):
+            for i in range(1):
                 net = load_bmodel(model_name, model_type="video")
                 self.nets.append(net)
             self.thread_num = thread_num
             self.cur_model_name = model_name
 
         if self.thread_num != thread_num:
-            diff = thread_num - self.thread_num
+            diff = 1 - len(self.nets)
             # print("diff: {}".format(diff))
             if diff > 0:
                 for i in range(diff):
@@ -199,6 +192,34 @@ class ImageUpscaler2(ImageUpscaler):
         loop = asyncio.get_running_loop()
         await loop.run_in_executor(None, cv2.imwrite, path, img)
 
+    async def image_upscale_thread(self, res_frame, target_path, file_name, async_task):
+        img_data = self.postprocess(res_frame)
+        img_data = cv2.cvtColor(img_data, cv2.COLOR_RGBA2BGR)
+        task = self.async_imwrite(os.path.join(target_path, file_name), img_data)
+        async_task.append(task)
+
+    async def face_enhance_thread(self, res_frame, img_copy, target_path, file_name, async_task):
+        print("in")
+        up_img = self.postprocess(res_frame, pad=False)
+        from plugin.face_enhance import FaceEnhance
+        face_enhancer = FaceEnhance(self.re_upscale_model, self.face_detect_model, self.face_pars_model,
+                                    self.face_enhance_model, name=self.cur_face_enhance_name)
+        res_frame = face_enhancer.run(img_copy, None, up_img)
+
+        # res_frame = self.postprocess(res_frame, pad=False)
+        res_frame = cv2.cvtColor(res_frame, cv2.COLOR_RGBA2BGR)
+        res_frame = res_frame[self.pad_black[0] * 4:1920 - self.pad_black[1] * 4,
+                    self.pad_black[2] * 4:2560 - self.pad_black[3] * 4, :]
+
+        task = self.async_imwrite(os.path.join(target_path, file_name), res_frame)
+        async_task.append(task)
+
+    def run_face_enhance_thread(self, res_frame, img_copy, target_path, file_name, async_task):
+        asyncio.run(self.face_enhance_thread(res_frame, img_copy, target_path, file_name, async_task))
+
+    def run_image_upscale_thread(self, res_frame, target_path, file_name, async_task):
+        asyncio.run(self.image_upscale_thread(res_frame, target_path, file_name, async_task))
+
     async def thread_progress(self, input_file_name, worker, source_path=None, target_path='./temp_res_frames', face_enhance="None"):
         imgs_data = [cv2.imread(os.path.join(source_path, i),) for i in input_file_name]
         imgs_infer_data = [cv2.cvtColor(i, cv2.COLOR_BGR2RGB) for i in imgs_data]
@@ -208,43 +229,23 @@ class ImageUpscaler2(ImageUpscaler):
         imgs_data.clear()
         input_numpy = np.concatenate(imgs_infer_data, axis=0)
         imgs_infer_data.clear()
-
         res_frames = worker([input_numpy])[0]
-        print(res_frames.shape)
 
         async_task = []
-        print(face_enhance)
-        for i in range(len(res_frames)):
-            if face_enhance != "None":
-                print("in")
-                up_img = self.postprocess(res_frames[i], pad=False)
-                from plugin.face_enhance import FaceEnhance
-                face_enhancer = FaceEnhance(self.re_upscale_model, self.face_detect_model, self.face_pars_model,
-                                            self.face_enhance_model, name=self.cur_face_enhance_name)
-                res_frame = face_enhancer.run(imgs_copy[i], None, up_img)
-
-                # res_frame = self.postprocess(res_frame, pad=False)
-                res_frame = cv2.cvtColor(res_frame, cv2.COLOR_RGBA2BGR)
-                res_frame = res_frame[self.pad_black[0] * 4:1920 - self.pad_black[1] * 4,
-                      self.pad_black[2] * 4:2560 - self.pad_black[3] * 4, :]
-
-                task = self.async_imwrite(os.path.join(target_path, input_file_name[i]), res_frame)
-                async_task.append(task)
-
-            else:
-                img_data = self.postprocess(res_frames[i])
-                img_data = cv2.cvtColor(img_data, cv2.COLOR_RGBA2BGR)
-                task = self.async_imwrite(os.path.join(target_path, input_file_name[i]), img_data)
-                async_task.append(task)
+        with ThreadPoolExecutor(4) as t:
+            for i in range(len(res_frames)):
+                if face_enhance != "None":
+                    t.submit(self.run_face_enhance_thread, res_frames[i], imgs_copy[i], target_path, input_file_name[i], async_task)
+                else:
+                    t.submit(self.run_image_upscale_thread, res_frames[i], target_path, input_file_name[i],
+                             async_task)
+            del res_frames
 
         await asyncio.gather(*async_task)
-        del res_frames
 
-    def run_thread_progress(self, input_file_name, worker, source_path, face_enhance):
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        loop.run_until_complete(self.thread_progress(input_file_name, worker, source_path, face_enhance=face_enhance))
-        loop.close()
+    def run_thread_progress(self, input_file_name, worker, source_path, face_enhance, tqdm_tool=None):
+        asyncio.run(self.thread_progress(input_file_name, worker, source_path, face_enhance=face_enhance))
+        tqdm_tool.update(1)
 
 
     def get_image_meta(self, input):
@@ -252,8 +253,6 @@ class ImageUpscaler2(ImageUpscaler):
         self.img_shape = img.shape[:2]
 
     def forward(self, input, face_enhance=None, bg_upscale=False):
-        print(face_enhance)
-        print("len self.net: {}".format(len(self.nets)))
         if isinstance(input, str):
             imgs_file = os.listdir(input)
             total_img_num = len(imgs_file)
@@ -264,22 +263,12 @@ class ImageUpscaler2(ImageUpscaler):
             frame_split.append(SPLIT if total_img_num % SPLIT == 0 else total_img_num % SPLIT)
             # print(frame_split)
             tqdm_tool = tqdm(total=task_num)
-            for i in range(0, task_num, self.thread_num):
-                sub_img_file = imgs_file[i*SPLIT:(i*SPLIT + SPLIT*self.thread_num)]
-                thread = []
-                for j in range(self.thread_num):
-                    if i + j < task_num:
-                        t = Thread(target=self.run_thread_progress, args=(sub_img_file[j*SPLIT: j*SPLIT + SPLIT], self.nets[j], input, face_enhance))
-                        thread.append(t)
-
-                for t in thread:
-                    t.start()
-
-                for t in thread:
-                    t.join()
-                    tqdm_tool.update(1)
-
-                del thread
+            print("thread_num: {}".format(self.thread_num))
+            with ThreadPoolExecutor(self.thread_num) as t:
+                for i in range(0, task_num):
+                    sub_img_file = imgs_file[i * SPLIT:(i * SPLIT + SPLIT)]
+                    t.submit(self.run_thread_progress,
+                             sub_img_file, self.nets[0], input, face_enhance, tqdm_tool)
 
 
 
