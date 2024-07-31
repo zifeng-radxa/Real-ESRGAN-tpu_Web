@@ -5,8 +5,10 @@ Run [Real-ESRGAN](https://github.com/xinntao/Real-ESRGAN) on [Sophon](https://ww
 chip support: **SG2300X**, **BM1684X**
 
 platform support: **ARM**, **X86** 
+
+Tested device: [Radxa Fogwise® AirBox](https://radxa.com/products/fogwise/airbox)
  
-**✨Support run by gradio** ~~or streamlit~~ (do not maintain)
+**✨Support run by gradio** ~~or streamlit (do not maintain)~~
 
 **🌟Support upscale video and image**
 
