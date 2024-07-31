@@ -6,7 +6,7 @@ chip support: **SG2300X**, **BM1684X**
 
 platform support: **ARM**, **X86** 
 
-Tested device: [Radxa Fogwise® AirBox](https://radxa.com/products/fogwise/airbox)
+Tested device: [Radxa Fogwise® AirBox](https://radxa.com/products/fogwise/airbox), [Sophon SC7+](https://en.sophgo.com/sophon-u/product/introduce/sc7-hp75.html)
  
 **✨Support run by gradio** ~~or streamlit (do not maintain)~~
 
