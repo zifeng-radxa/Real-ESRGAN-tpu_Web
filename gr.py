@@ -1,9 +1,10 @@
 import gradio as gr
 from core.pipeline import image_pipeline, image_model_list, video_pipeline, video_model_list
 from tools.utils import get_host_ip
+
 description = """
 # Real-ESRGAN with Airbox🛸\n
-run Real-ESRGAN to upscale video/image resolution by TPU
+run Real-ESRGAN to upscale image/video resolution by TPU
 ## Model choose
 **RealESRGAN_x4plus**\n
 **RealESRGAN_x4plus_anime_6B** optimized for anime images with much smaller model size\n
@@ -21,49 +22,6 @@ if __name__ == '__main__':
     with gr.Blocks(analytics_enabled=False) as demo:
         with gr.Row():
             gr.Markdown(description)
-        with gr.Tab("Video"):
-            with gr.Row():
-                with gr.Column():
-                    up_video = gr.Video(format="mp4", label="upload a video to upscale resolution")
-                    model = gr.Dropdown(choices=video_model_list, value=video_model_list[0], info="select a model",
-                                        label="Model",
-                                        )
-                    with gr.Row():
-                        face_enhance_v = gr.Radio(
-                            choices=["GFPGAN", "CodeFormer", "None"],
-                            value="None",
-                            type="value",
-                            label="Face Enhance Tools",
-                        )
-
-                        background_remove_v = gr.Radio(
-                            choices=["upscale + remove background",
-                                     "only remove background",
-                                     "None"],
-                            value="None",
-                            type="index",
-                            label="Background Remove tool"
-                        )
-                    with gr.Row():
-                        audio = gr.Checkbox(
-                            label="audio",
-                            info="if click would output with audio",
-                            value=True
-                        )
-                        num_worker = gr.Slider(1, 4, value=2, step=1, label="Thread", info="Choose between 1 and 4", )
-
-                    with gr.Row():
-                        clear_button_v = gr.ClearButton(value="Clear", components=[up_video])
-                        start_button_v = gr.Button("Start improve", variant="primary", scale=1)
-
-                with gr.Column():
-                    ret_video = gr.Video(label="output video", format=None, autoplay=False)
-                    info_text = gr.Textbox(label="info output", lines=3)
-
-        # background_remove_v.change(change_thread_num, background_remove_v, num_worker)
-        clear_button_v.add(components=[info_text, ret_video])
-        start_button_v.click(video_pipeline, [up_video, model, face_enhance_v, background_remove_v, num_worker, audio],
-                           outputs=[info_text, ret_video])
 
         with gr.Tab("Image"):
             with gr.Row():
@@ -120,6 +78,50 @@ if __name__ == '__main__':
 
             clear_button.add(components=[up_img, info_text, ret_img, bg_img, bg_img_up])
             start_button.click(image_pipeline, [up_img, model, face_enhance_i, background_remove_i, id_bg_color, user_bg_color, bg_img, bg_img_up], outputs=[info_text, ret_img])
+
+        with gr.Tab("Video"):
+            with gr.Row():
+                with gr.Column():
+                    up_video = gr.Video(format="mp4", label="upload a video to upscale resolution")
+                    model = gr.Dropdown(choices=video_model_list, value=video_model_list[0], info="select a model",
+                                        label="Model",
+                                        )
+                    with gr.Row():
+                        face_enhance_v = gr.Radio(
+                            choices=["GFPGAN", "CodeFormer", "None"],
+                            value="None",
+                            type="value",
+                            label="Face Enhance Tools",
+                        )
+
+                        background_remove_v = gr.Radio(
+                            choices=["upscale + remove background",
+                                     "only remove background",
+                                     "None"],
+                            value="None",
+                            type="index",
+                            label="Background Remove tool"
+                        )
+                    with gr.Row():
+                        audio = gr.Checkbox(
+                            label="audio",
+                            info="if click would output with audio",
+                            value=True
+                        )
+                        num_worker = gr.Slider(1, 4, value=2, step=1, label="Thread", info="Choose between 1 and 4", )
+
+                    with gr.Row():
+                        clear_button_v = gr.ClearButton(value="Clear", components=[up_video])
+                        start_button_v = gr.Button("Start improve", variant="primary", scale=1)
+
+                with gr.Column():
+                    ret_video = gr.Video(label="output video", format=None, autoplay=False)
+                    info_text = gr.Textbox(label="info output", lines=3)
+
+            # background_remove_v.change(change_thread_num, background_remove_v, num_worker)
+            clear_button_v.add(components=[info_text, ret_video])
+            start_button_v.click(video_pipeline, [up_video, model, face_enhance_v, background_remove_v, num_worker, audio],
+                               outputs=[info_text, ret_video])
 
     demo.queue(max_size=10)
     demo.launch(debug=False, show_api=True, share=False, server_name=get_host_ip())
