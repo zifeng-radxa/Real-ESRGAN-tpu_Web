@@ -1,14 +1,22 @@
-# Real-ESRGAN-TPU
+# Real-ESRGAN-TPU v2.0
 
-> Run Real-ESRGAN on SG2300X 
-> 
-**✨Support run by gradio or streamlit**
+Run [Real-ESRGAN](https://github.com/xinntao/Real-ESRGAN) on [Sophon](https://www.sophon.ai/) TPU
+
+chip support: **SG2300X**, **BM1684X**
+
+platform support: **ARM**, **X86** 
+ 
+**✨Support run by gradio** ~~or streamlit~~ (do not maintain)
 
 **🌟Support upscale video and image**
 
 **🌠Support models:** *RealESRGAN_x4plus*, *RealESRGAN_x4plus_anime_6B*, *realesr-animevideo_v3*, *realesr-general-x4v3* 
 
-**🏆Support Face Enhance**
+**🏆Support Face Enhance:** *[CodeFormer](https://github.com/sczhou/CodeFormer)*, *[GFPGAN](https://github.com/TencentARC/GFPGAN)*
+
+**🌟Support Background Remove:** *[RMBG](https://github.com/chenxwh/cog-RMBG)*
+
+**🌠Support DIY Background Picture**
 
 ### Real-ESRGAN: Training Real-World Blind Super-Resolution with Pure Synthetic Data
 
@@ -30,16 +38,20 @@
 - Clone the tool-box
   ```bash
   cd Real-ESRGAN-tpu_Web
-  git clone https://github.com/zifeng-radxa/GFPGAN.git
   git clone https://github.com/zifeng-radxa/FACEXLIB.git
   ```
 
-- Setup environment (use sophon-opencv, please setup follow Sophon-mw instruction)
-
+- Setup environment
   ```bash
-  pip3 install basicsr -i https://pypi.python.org/simple
   pip3 install -r requirements.txt
+  ## aarch64
   pip3 install https://github.com/radxa-edge/TPU-Edge-AI/releases/download/v0.1.0/tpu_perf-1.2.31-py3-none-manylinux2014_aarch64.whl
+  ## x86
+  pip3 install https://github.com/radxa-edge/TPU-Edge-AI/releases/download/v0.1.0/tpu_perf-1.2.31-py3-none-manylinux2014_x86_64.whl
+  ```
+- Instal FFmpeg (**do not support sophon-ffmpeg**)
+  ```bash
+  sudo apt install ffmpeg
   ```
 - Download models
   ```bash
@@ -50,7 +62,7 @@
   ```bash
   bash run_gr.sh
   ```
-  - *(Optional) Run by streamlit*
+  ~~- *(Optional) Run by streamlit*~~
   ```bash
   bash run_st.sh
   ```

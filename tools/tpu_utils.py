@@ -1,7 +1,7 @@
 import os
 from tpu_perf.infer import SGInfer
 import time
-MODEL_PATH = './model/'
+MODEL_PATH = './models/'
 DEVICE_ID = 0
 
 
