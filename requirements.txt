@@ -1,6 +1,6 @@
 numpy
 gradio==3.50.2
 tqdm
-opencv-python
-torch
+opencv-python-headless
+torch==2.2.0
 pillow
