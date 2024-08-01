@@ -120,6 +120,8 @@ def video_pipeline(input, model, face_enhance=None, background_remove=None, thre
         os.makedirs('./temp_frames', exist_ok=True)
     if not os.path.exists('./temp_res_frames'):
         os.makedirs('./temp_res_frames', exist_ok=True)
+    if not os.path.exists('./temp_mask'):
+        os.makedirs('./temp_mask', exist_ok=True)
 
     cap = cv2.VideoCapture(input)
     fps = cap.get(cv2.CAP_PROP_FPS)
