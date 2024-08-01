@@ -1,6 +1,7 @@
 numpy
-gradio==3.50.2
+gradio==4.40.0
 tqdm
 opencv-python-headless
 torch==2.2.0
 pillow
+torchvision==0.17.0

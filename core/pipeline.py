@@ -133,13 +133,13 @@ def video_pipeline(input, model, face_enhance=None, background_remove=None, thre
         print(type(face_enhance))
         # upscale + rmgb + upscale
         print("up scaling video step 1")
-        image_upscaler2.change_model("realesr-animevideov3_f16.bmodel", face_enhance, thread_num=thread)
+        image_upscaler2.change_model("realesr-animevideov3_f16_video.bmodel", face_enhance, thread_num=thread)
         image_upscaler2.forward('./temp_frames', face_enhance=face_enhance)
         clean_tpu_memory([image_upscaler2])
         print("removing background")
         bger2.init_model(thread_num=thread)
         bger2.forward('./temp_res_frames', save_type="mask")
-        if model == "realesr-animevideov3_f16.bmodel":
+        if model == "realesr-animevideov3_f16_video.bmodel":
             print("merge background")
             bger2.forward('./temp_frames', call_back="run_io_bgrm_progress")
         else:

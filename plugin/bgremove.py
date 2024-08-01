@@ -77,7 +77,7 @@ class Bgremover2(Bgremover):
         diff = 1 - cur_net
         if diff > 0:
             for i in range(diff):
-                net = load_bmodel('rmbg_f16_30.bmodel', model_type="video")
+                net = load_bmodel('rmbg_f16_video.bmodel', model_type="video")
                 self.nets.append(net)
         else:
             for i in range(-diff):
