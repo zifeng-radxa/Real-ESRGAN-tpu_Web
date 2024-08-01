@@ -199,7 +199,6 @@ class ImageUpscaler2(ImageUpscaler):
         async_task.append(task)
 
     async def face_enhance_thread(self, res_frame, img_copy, target_path, file_name, async_task):
-        print("in")
         up_img = self.postprocess(res_frame, pad=False)
         from plugin.face_enhance import FaceEnhance
         face_enhancer = FaceEnhance(self.re_upscale_model, self.face_detect_model, self.face_pars_model,

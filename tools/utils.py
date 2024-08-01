@@ -85,7 +85,7 @@ def ratio_resize(img, target_size):
     return img_new, pad_black
 
 def get_model_list(mode_type="image"):
-    files = os.listdir('./model/{}'.format(mode_type))
+    files = os.listdir('./models/{}'.format(mode_type))
     model_list = []
     for i in files:
         if i[:4].lower() == "real":

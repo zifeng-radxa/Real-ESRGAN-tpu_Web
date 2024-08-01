@@ -15,6 +15,7 @@ image_upscaler2 = ImageUpscaler2()
 bger = Bgremover()
 bger2 = Bgremover2()
 
+FFMPEG_CMD = "ffmpeg"
 
 @timer
 def image_pipeline(input, model, face_enhance=None, background_remove=None, bg_color="White", user_bg_color=None, bg_img=None, bg_img_up=None, output_path=None, save=False):
@@ -112,7 +113,7 @@ def video_pipeline(input, model, face_enhance=None, background_remove=None, thre
 
     if input.endswith('.flv'):
         mp4_path = input.replace('.flv', '.mp4')
-        os.system(f'ffmpeg_ubuntu -i {input} -codec copy {mp4_path}')
+        os.system(f'{FFMPEG_CMD} -i {input} -codec copy {mp4_path}')
         input = mp4_path
 
     if not os.path.exists('./temp_frames'):
@@ -124,7 +125,7 @@ def video_pipeline(input, model, face_enhance=None, background_remove=None, thre
     fps = cap.get(cv2.CAP_PROP_FPS)
     cap.release()
     print("**************")
-    os.system(f'ffmpeg_ubuntu -i {input} -qscale:v 1 -qmin 1 -qmax 1 -vsync 0  ./temp_frames/frame%d.png')
+    os.system(f'{FFMPEG_CMD} -i {input} -qscale:v 1 -qmin 1 -qmax 1 -vsync 0  ./temp_frames/frame%d.png')
     print("**************")
 
     if background_remove == 0:
@@ -172,7 +173,7 @@ def video_pipeline(input, model, face_enhance=None, background_remove=None, thre
                 os.makedirs(os.path.join('./result', 'video'), exist_ok=True)
             output_path = './result/video/out_{}.mp4'.format(uuid.uuid4())
         print("merge")
-        os.system(f'ffmpeg_ubuntu -framerate {fps} -i ./temp_res_frames/frame%d.png -c:v libx264 -pix_fmt yuv420p -y {output_path}')
+        os.system(f'{FFMPEG_CMD} -framerate {fps} -i ./temp_res_frames/frame%d.png -c:v libx264 -pix_fmt yuv420p -y {output_path}')
         if audio:
             output_path = fuse_audio_with_ffmpeg(input,output_path)
     clean_cache_file(background_remove == 0)
